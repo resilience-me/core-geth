@@ -706,27 +706,25 @@ func (c *Clique) Seal(chain consensus.ChainHeaderReader, block *types.Block, res
 	
 	go func() {
 		i := 0
+		loop:
 		for {
 			select {
 			case <-stop:
 				return
 			case <-time.After(delay):
 				if c.config.ValidatorContract == common.Address{} {
-					break
+					break loop
 				}
 				validator := c.getValidator(uint64(i));
 				if validator == signer {
-					break
+					break loop
 				}
 				i++
-				delay += time.Unix(c.config.Deadline, 0)
+				delay += time.Duration(c.config.Deadline) * time.Second
 			}
 		}
 		header.Difficulty = new(big.Int).Sub(big.NewInt(1), big.NewInt(int64(i)))
 		sighash, err := signFn(accounts.Account{Address: signer}, accounts.MimetypeClique, CliqueRLP(header))
-		if err != nil {
-			return err
-		}
 		header.Extra = sighash
 		select {
 			case results <- block.WithSeal(header):
