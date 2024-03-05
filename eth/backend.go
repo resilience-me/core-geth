@@ -507,6 +507,11 @@ func (s *Ethereum) StartMining(threads int) error {
 				return fmt.Errorf("signer missing: %v", err)
 			}
 			cli.Authorize(eb, wallet.SignData, wallet.SignTx)
+			err := cli.LoadHashOnion()
+			if err != nil {
+				log.Error("LoadHashOnion failed")
+				return err
+			}
 		}
 		// If mining is started, we can disable the transaction rejection mechanism
 		// introduced to speed sync times.
