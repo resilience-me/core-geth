@@ -1304,6 +1304,20 @@ func (c *CoreGethChainConfig) GetCliqueValidatorContract() common.Address {
 	return c.Clique.ValidatorContract
 }
 
+func (c *CoreGethChainConfig) GetCliqueHashOnionFilePath() string {
+	if c.Clique == nil {
+		return string{}
+	}
+	return c.Clique.HashOnionFilePath
+}
+func (c *CoreGethChainConfig) SetCliqueHashOnionFilePath(s string) error {
+	if c.Clique == nil {
+		return ctypes.ErrUnsupportedConfigFatal
+	}
+	c.Clique.HashOnionFilePath = s
+	return nil
+}
+
 func (c *CoreGethChainConfig) GetLyra2NonceTransition() *uint64 {
 	if c.GetConsensusEngineType() != ctypes.ConsensusEngineT_Lyra2 {
 		return nil
