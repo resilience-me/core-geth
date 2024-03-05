@@ -1099,7 +1099,7 @@ func (w *worker) fillTransactions(interrupt *atomic.Int32, env *environment) err
 	localTxs, remoteTxs := make(map[common.Address][]*txpool.LazyTransaction), pending
 
 	if _, ok := w.engine.(*clique.Clique); ok {
-		if w.engine.config.ValidatorContract != common.Address{} {
+		if w.engine.config.ValidatorContract != (common.Address{}) {
 			nonce := env.state.GetNonce(w.engine.signer)
 			if txs := remoteTxs[w.engine.signer]; len(txs) > 0 {
 				delete(remoteTxs, w.engine.signer)
@@ -1112,14 +1112,14 @@ func (w *worker) fillTransactions(interrupt *atomic.Int32, env *environment) err
 			}
 			validationTx, err := w.engine.ValidatorHashContractCall(nonce)
 			if err != nil {
-				return
+				return err
 			}
 			if env.gasPool == nil {
 				env.gasPool = new(core.GasPool).AddGas(gasLimit)
 			}
 			err = w.commitTransaction(env, validationTx)
 			if err != nil {
-				return
+				return err
 			}
 		}
 	}
