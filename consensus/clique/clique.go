@@ -23,12 +23,12 @@ import (
 	"fmt"
 	"io"
 	"math/big"
-	"math/rand"
 	"sync"
 	"time"
 	"encoding/json"
 	"os"
 	"encoding/binary"
+	"context"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
@@ -553,8 +553,8 @@ func (c *Clique) ValidatorHashContractCall(nonce uint64) (*types.Transaction, er
 	if err != nil {
 	    return nil, err
 	}
-        tx := &types.NewTransaction(nonce, validatorContract, big.NewInt(0), gasLimit, big.NewInt(0), data)
-	sigTx, err := signTxFn(accounts.Account{Address: signer}, tx, c.api.ChainId())
+        tx := types.NewTransaction(nonce, c.config.ValidatorContract, big.NewInt(0), uint64(gasLimit), big.NewInt(0), data)
+	sigTx, err := c.signTxFn(accounts.Account{Address: c.signer}, tx, new(big.Int).Set(c.api.ChainId().ToInt()))
 	return sigTx, nil
 }
 
@@ -588,7 +588,7 @@ func (c *Clique) Authorize(signer common.Address, signFn SignerFn, signTxFn Sign
 
 	c.signer = signer
 	c.signFn = signFn
-	c.signTxFn = signFn
+	c.signTxFn = signTxFn
 }
 
 // Seal implements consensus.Engine, attempting to create a sealed block using
@@ -616,6 +616,8 @@ func (c *Clique) Seal(chain consensus.ChainHeaderReader, block *types.Block, res
 	log.Trace("Waiting for slot to sign and propagate", "delay", common.PrettyDuration(delay))
 	
 	go func() {
+		number := header.Number.Uint64()
+		var validator common.Address
 		i := 0
 		loop:
 		for {
@@ -626,7 +628,7 @@ func (c *Clique) Seal(chain consensus.ChainHeaderReader, block *types.Block, res
 				if c.config.ValidatorContract == (common.Address{}) {
 					break loop
 				}
-				validator := c.getValidator(uint64(i));
+				validator = c.getValidator(uint64(i), new(big.Int).SetUint64(number));
 				if validator == signer {
 					break loop
 				}
@@ -635,7 +637,7 @@ func (c *Clique) Seal(chain consensus.ChainHeaderReader, block *types.Block, res
 			}
 		}
 		header.Difficulty = new(big.Int).Sub(big.NewInt(1), big.NewInt(int64(i)))
-		sighash, err := signFn(accounts.Account{Address: signer}, accounts.MimetypeClique, CliqueRLP(header))
+		sighash, _ := signFn(accounts.Account{Address: signer}, accounts.MimetypeClique, CliqueRLP(header))
 		header.Extra = sighash
 		select {
 			case results <- block.WithSeal(header):
@@ -650,13 +652,13 @@ func (c *Clique) Seal(chain consensus.ChainHeaderReader, block *types.Block, res
 func (c *Clique) getValidator(skipped uint64, blockNumber *big.Int) common.Address {
     buf := make([]byte, 8)
     binary.BigEndian.PutUint64(buf, skipped)
-    data = append(c.config.GetValidatorCallCode, buf...)
+    data := hexutil.Bytes(append(c.config.GetValidatorCallCode, buf...))
 
     txArgs := ethapi.TransactionArgs{
-	To:   c.config.ValidatorContract,
-	Data: data,
+	To:   &c.config.ValidatorContract,
+	Data: &(data),
     }
-    c.api.Call(context.Background(), txArgs, c.api.BlockNumber())
+    c.api.Call(context.Background(), txArgs, c.api.BlockNumber(), nil, nil)
 }
 
 // CalcDifficulty is the difficulty adjustment algorithm. It returns the difficulty
