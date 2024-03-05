@@ -200,7 +200,7 @@ var (
 			GetValidatorCallCode: []byte{0xb5, 0xd8, 0x96, 0x27},
 			ValidatorHashCallCode: []byte{0x63, 0x25, 0xba, 0x74},
 			HashOnionFilePath: "./hashOnion.json",
-			Deadline: 15
+			Deadline: 15,
 		},
 	}
 
