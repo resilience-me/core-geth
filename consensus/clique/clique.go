@@ -45,6 +45,7 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/trie"
 	"golang.org/x/crypto/sha3"
+	"github.com/ethereum/go-ethereum/internal/ethapi"
 )
 
 const (
@@ -144,6 +145,8 @@ var (
 // SignerFn hashes and signs the data to be signed by a backing account.
 type SignerFn func(signer accounts.Account, mimeType string, message []byte) ([]byte, error)
 
+type SignerTxFn func(signer accounts.Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error)
+
 // ecrecover extracts the Ethereum account address from a signed header.
 func ecrecover(header *types.Header, sigcache *sigLRU) (common.Address, error) {
 	// If the signature's already cached, return that
@@ -169,6 +172,11 @@ func ecrecover(header *types.Header, sigcache *sigLRU) (common.Address, error) {
 	return signer, nil
 }
 
+type HashOnion struct {
+    root common.Hash `json:"root"`
+    layers int `json:"layers"`
+}
+
 // Clique is the proof-of-authority consensus engine proposed to support the
 // Ethereum testnet following the Ropsten attacks.
 type Clique struct {
@@ -177,12 +185,15 @@ type Clique struct {
 
 	recents    *lru.Cache[common.Hash, *Snapshot] // Snapshots for recent block to speed up reorgs
 	signatures *sigLRU                            // Signatures of recent blocks to speed up mining
+    	hashOnion HashOnion
 
 	proposals map[common.Address]bool // Current list of proposals we are pushing
 
 	signer common.Address // Ethereum address of the signing key
 	signFn SignerFn       // Signer function to authorize hashes with
+	signTxFn SignerTxFn
 	lock   sync.RWMutex   // Protects the signer and proposals fields
+    	api *ethapi.BlockChainAPI
 
 	// The fields below are for testing only
 	fakeDiff bool // Skip difficulty verifications
