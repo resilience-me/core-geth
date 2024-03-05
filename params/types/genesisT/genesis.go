@@ -1041,6 +1041,12 @@ func (g *Genesis) SetCliqueEpoch(n uint64) error {
 func (g *Genesis) GetCliqueValidatorContract() common.Address {
 	return g.Config.GetCliqueValidatorContract()
 }
+func (g *Genesis) GetCliqueHashOnionFilePath() common.Address {
+	return g.Config.GetCliqueHashOnionFilePath()
+}
+func (g *Genesis) SetCliqueHashOnionFilePath(a common.Address) error {
+	return g.Config.SetCliqueHashOnionFilePath()
+}
 
 func (g *Genesis) GetLyra2NonceTransition() *uint64 {
 	return g.Config.GetLyra2NonceTransition()
