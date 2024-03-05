@@ -62,7 +62,6 @@ import (
 	"github.com/ethereum/go-ethereum/params/vars"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/ethereum/go-ethereum/rpc/types"
 )
 
 // Config contains the configuration options of the ETH protocol.
