@@ -313,13 +313,13 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	// Start the RPC service
 	eth.netRPCService = ethapi.NewNetAPI(eth.p2pServer, config.NetworkId)
 
+	apis := eth.APIs()
 	// Register the backend on the node
-	stack.RegisterAPIs(eth.APIs())
+	stack.RegisterAPIs(apis)
 	stack.RegisterProtocols(eth.Protocols())
 	stack.RegisterLifecycle(eth)
 
 	if _, ok := engine.(*clique.Clique); ok {
-	    _, apis := stack.getAPIs()
 	    for _, api := range apis {
 		if api.Namespace == "eth" {
 		    if blockChainAPI, ok := api.Service.(*ethapi.BlockChainAPI); ok {
