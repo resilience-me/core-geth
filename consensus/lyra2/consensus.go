@@ -485,3 +485,5 @@ func accumulateRewards(config ctypes.ChainConfigurator, state *state.StateDB, he
 	}
 	state.AddBalance(header.Coinbase, minerReward)
 }
+
+func (lyra2 *Lyra2) InspectTransaction(block *types.Block, receipts types.Receipts) bool { return false }
