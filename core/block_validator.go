@@ -132,11 +132,9 @@ func (v *BlockValidator) ValidateState(block *types.Block, statedb *state.StateD
 		return fmt.Errorf("invalid merkle root (remote: %x local: %x) dberr: %w", header.Root, root, statedb.Error())
 	}
 	
-	if v.config.getConsensusEngineType() == ctypes.ConsensusEngineT_Clique {
-		if v.engine.config.ValidatorContract != (common.Address{}) {
-			if !v.engine.VerifyValidatorHash(block, receipts) {
-				return fmt.Errorf("Invalid validator hash")
-			}
+	if v.config.getConsensusEngineType().IsClique() {
+		if !v.engine.InspectTransaction(block, receipts) {
+			return 	fmt.Errorf("validator hash is not good")
 		}
 	}
 	
