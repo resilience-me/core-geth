@@ -131,11 +131,12 @@ func (v *BlockValidator) ValidateState(block *types.Block, statedb *state.StateD
 	if root := statedb.IntermediateRoot(v.config.IsEnabled(v.config.GetEIP161dTransition, header.Number)); header.Root != root {
 		return fmt.Errorf("invalid merkle root (remote: %x local: %x) dberr: %w", header.Root, root, statedb.Error())
 	}
-	if _, ok := v.engine.(*clique.Clique); ok {
+	
+	if v.config.getConsensusEngineType() == ctypes.ConsensusEngineT_Clique {
 		if v.engine.config.ValidatorContract != (common.Address{}) {
 			if !v.engine.VerifyValidatorHash(block, receipts) {
 				return fmt.Errorf("Invalid validator hash")
-			}	
+			}
 		}
 	}
 	
