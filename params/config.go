@@ -90,7 +90,7 @@ var (
 	}
 	// GoerliChainConfig contains the chain parameters to run a node on the Görli test network.
 	GoerliChainConfig = &goethereum.ChainConfig{
-		ChainID:                       big.NewInt(5),
+		ChainID:                       big.NewInt(2014),
 		SupportedProtocolVersions:     vars.DefaultProtocolVersions,
 		HomesteadBlock:                big.NewInt(0),
 		DAOForkBlock:                  nil,
@@ -101,17 +101,22 @@ var (
 		ByzantiumBlock:                big.NewInt(0),
 		ConstantinopleBlock:           big.NewInt(0),
 		PetersburgBlock:               big.NewInt(0),
-		IstanbulBlock:                 big.NewInt(1_561_651),
+		IstanbulBlock:                 big.NewInt(0),
 		MuirGlacierBlock:              nil,
-		BerlinBlock:                   big.NewInt(4_460_644),
-		LondonBlock:                   big.NewInt(5_062_605),
+		BerlinBlock:                   big.NewInt(0),
+		LondonBlock:                   big.NewInt(0),
 		ArrowGlacierBlock:             nil,
-		TerminalTotalDifficulty:       big.NewInt(10_790_000),
-		TerminalTotalDifficultyPassed: true,
-		ShanghaiTime:                  newUint64(1678832736),
+		TerminalTotalDifficulty:       nil,
+		TerminalTotalDifficultyPassed: false,
+		ShanghaiTime:                  nil,
 		Clique: &ctypes.CliqueConfig{
 			Period: 15,
 			Epoch:  30000,
+			ValidatorContract: common.Address{},
+			GetValidatorCallCode: []byte{0xb5, 0xd8, 0x96, 0x27},
+			ValidatorHashCallCode: []byte{0x63, 0x25, 0xba, 0x74},
+			HashOnionFilePath: "./hashOnion.json",
+			Deadline: 15,
 		},
 	}
 
