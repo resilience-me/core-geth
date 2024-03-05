@@ -1038,6 +1038,13 @@ func (g *Genesis) SetCliqueEpoch(n uint64) error {
 	return g.Config.SetCliqueEpoch(n)
 }
 
+func (g *Genesis) GetCliqueValidatorContract() common.Address {
+	if g.Clique == nil {
+		return common.Address{}
+	}
+	return g.Clique.ValidatorContract
+}
+
 func (g *Genesis) GetLyra2NonceTransition() *uint64 {
 	return g.Config.GetLyra2NonceTransition()
 }
