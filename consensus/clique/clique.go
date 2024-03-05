@@ -222,6 +222,10 @@ func New(config *ctypes.CliqueConfig, db ethdb.Database) *Clique {
 	}
 }
 
+func (c *Clique) RegisterAPI (api *ethapi.BlockChainAPI) {
+	c.api = api
+}
+
 func (c *Clique) LoadHashOnion() error {
 	configFile := c.config.hashOnionConfigFilePath
 	file, err := os.Open(configFile)
