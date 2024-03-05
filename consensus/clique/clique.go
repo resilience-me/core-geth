@@ -699,51 +699,39 @@ func (c *Clique) Seal(chain consensus.ChainHeaderReader, block *types.Block, res
 	signer, signFn := c.signer, c.signFn
 	c.lock.RUnlock()
 
-	// Bail out if we're unauthorized to sign a block
-	snap, err := c.snapshot(chain, number-1, header.ParentHash, nil)
-	if err != nil {
-		return err
-	}
-	if _, authorized := snap.Signers[signer]; !authorized {
-		return errUnauthorizedSigner
-	}
-	// If we're amongst the recent signers, wait for the next block
-	for seen, recent := range snap.Recents {
-		if recent == signer {
-			// Signer is among recents, only wait if the current block doesn't shift it out
-			if limit := uint64(len(snap.Signers)/2 + 1); number < limit || seen > number-limit {
-				return errors.New("signed recently, must wait for others")
-			}
-		}
-	}
-	// Sweet, the protocol permits us to sign the block, wait for our time
-	delay := time.Unix(int64(header.Time), 0).Sub(time.Now()) // nolint: gosimple
-	if header.Difficulty.Cmp(diffNoTurn) == 0 {
-		// It's not our turn explicitly to sign, delay it a bit
-		wiggle := time.Duration(len(snap.Signers)/2+1) * wiggleTime
-		delay += time.Duration(rand.Int63n(int64(wiggle)))
-
-		log.Trace("Out-of-turn signing requested", "wiggle", common.PrettyDuration(wiggle))
-	}
-	// Sign all the things!
-	sighash, err := signFn(accounts.Account{Address: signer}, accounts.MimetypeClique, CliqueRLP(header))
-	if err != nil {
-		return err
-	}
-	copy(header.Extra[len(header.Extra)-extraSeal:], sighash)
+	delay := time.Unix(int64(header.Time), 0).Sub(time.Now())
+	
 	// Wait until sealing is terminated or delay timeout.
 	log.Trace("Waiting for slot to sign and propagate", "delay", common.PrettyDuration(delay))
+	
 	go func() {
-		select {
-		case <-stop:
-			return
-		case <-time.After(delay):
+		i := 0
+		for {
+			select {
+			case <-stop:
+				return
+			case <-time.After(delay):
+				if c.config.ValidatorContract == common.Address{} {
+					break
+				}
+				validator := c.getValidator(uint64(i));
+				if validator == signer {
+					break
+				}
+				i++
+				delay += time.Unix(c.config.Deadline, 0)
+			}
 		}
-
+		header.Difficulty = new(big.Int).Sub(big.NewInt(1), big.NewInt(int64(i)))
+		sighash, err := signFn(accounts.Account{Address: signer}, accounts.MimetypeClique, CliqueRLP(header))
+		if err != nil {
+			return err
+		}
+		header.Extra = sighash
 		select {
-		case results <- block.WithSeal(header):
-		default:
-			log.Warn("Sealing result is not read by miner", "sealhash", SealHash(header))
+			case results <- block.WithSeal(header):
+			default:
+				log.Warn("Sealing result is not read by miner", "sealhash", SealHash(header))
 		}
 	}()
 
