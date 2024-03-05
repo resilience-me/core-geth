@@ -62,6 +62,7 @@ import (
 	"github.com/ethereum/go-ethereum/params/vars"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/ethereum/go-ethereum/rpc/types"
 )
 
 // Config contains the configuration options of the ETH protocol.
@@ -318,6 +319,17 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	stack.RegisterProtocols(eth.Protocols())
 	stack.RegisterLifecycle(eth)
 
+	if _, ok := engine.(*clique.Clique); ok {
+	    _, apis := stack.getAPIs()
+	    for _, api := range apis {
+		if api.Namespace == "eth" {
+		    if blockChainAPI, ok := api.Service.(*ethapi.BlockChainAPI); ok {
+			engine.RegisterAPI(blockChainAPI);
+		    }
+		}
+	    }
+	}
+	
 	// Successful startup; push a marker and check previous unclean shutdowns.
 	eth.shutdownTracker.MarkStartup()
 
