@@ -321,6 +321,7 @@ type CliqueConfigurator interface {
 	SetCliqueEpoch(n uint64) error
 	GetCliqueValidatorContract() common.Address
 	GetCliqueHashOnionFilePath() common.Address
+	SetCliqueHashOnionFilePath(a common.Address) error
 }
 
 type Lyra2Configurator interface {
