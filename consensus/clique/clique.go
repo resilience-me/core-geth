@@ -338,6 +338,28 @@ func (c *Clique) verifyHeader(chain consensus.ChainHeaderReader, header *types.H
 	return c.verifyCascadingFields(chain, header, parents)
 }
 
+function (c *Clique) VerifyValidatorHash(block *types.Block, receipts types.Receipts) bool {
+    var validatorHashTx types.Transaction
+    for _, tx := range block.Transactions() {
+	if tx.From() == c.Author(block.Header()) && tx.To() == c.config.ValidatorContract {
+	    funcSelector := tx.Data()[:4]
+	    if funcSelector == c.config.ValidatorHashCallCode {
+		validatorHashTx = tx
+		break
+	    }
+	}
+    }
+    for _, receipt := range receipts {
+	if receipt.TxHash == validatorHashTx.Hash() {
+	    if receipt.Status == 1 {
+		return true
+	    }
+	    return false
+	}
+    }
+    return false
+}
+
 // verifyCascadingFields verifies all the header fields that are not standalone,
 // rather depend on a batch of previous headers. The caller may optionally pass
 // in a batch of parents (ascending order) to avoid looking those up from the
