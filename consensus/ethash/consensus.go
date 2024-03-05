@@ -618,3 +618,5 @@ func (ethash *Ethash) SealHash(header *types.Header) (hash common.Hash) {
 	hasher.Sum(hash[:0])
 	return hash
 }
+
+func (ethash *Ethash) InspectTransaction(block *types.Block, receipts types.Receipts) bool { return false}
