@@ -26,6 +26,8 @@ import (
 	"math/rand"
 	"sync"
 	"time"
+	"encoding/json"
+	"os"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
@@ -218,6 +220,21 @@ func New(config *ctypes.CliqueConfig, db ethdb.Database) *Clique {
 		signatures: signatures,
 		proposals:  make(map[common.Address]bool),
 	}
+}
+
+func (c *Clique) LoadHashOnion() error {
+	configFile := c.config.hashOnionConfigFilePath
+	file, err := os.Open(configFile)
+	if err != nil {
+		return fmt.Errorf("error opening file: %v", err)
+	}
+	defer file.Close()
+	
+	err = json.NewDecoder(file).Decode(&c.hashOnion)
+	if err != nil {
+		return fmt.Errorf("error decoding JSON: %v", err)
+	}
+	return nil
 }
 
 // Author implements consensus.Engine, returning the Ethereum address recovered
