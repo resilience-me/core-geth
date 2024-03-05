@@ -319,11 +319,11 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	stack.RegisterProtocols(eth.Protocols())
 	stack.RegisterLifecycle(eth)
 
-	if _, ok := engine.(*clique.Clique); ok {
+	if cliqueEngine, ok := engine.(*clique.Clique); ok {
 	    for _, api := range apis {
 		if api.Namespace == "eth" {
 		    if blockChainAPI, ok := api.Service.(*ethapi.BlockChainAPI); ok {
-			engine.RegisterAPI(blockChainAPI);
+			cliqueEngine.RegisterAPI(blockChainAPI);
 		    }
 		}
 	    }
