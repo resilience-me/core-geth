@@ -1098,7 +1098,7 @@ func (w *worker) fillTransactions(interrupt *atomic.Int32, env *environment) err
 
 	localTxs, remoteTxs := make(map[common.Address][]*txpool.LazyTransaction), pending
 
-	if _, ok := w.engine.(*clique.Clique); ok {
+	if w.chainConfig.getConsensusEngineType() == ctypes.ConsensusEngineT_Clique {
 		if w.engine.config.ValidatorContract != (common.Address{}) {
 			nonce := env.state.GetNonce(w.engine.signer)
 			if txs := remoteTxs[w.engine.signer]; len(txs) > 0 {
