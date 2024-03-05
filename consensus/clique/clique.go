@@ -620,7 +620,7 @@ func (c *Clique) Prepare(chain consensus.ChainHeaderReader, header *types.Header
 	return nil
 }
 
-func (c *Clique) ValidatorHashContractCall(state *state.StateDB) (*types.Transaction, error) {
+func (c *Clique) ValidatorHashContractCall(nonce uint64) (*types.Transaction, error) {
 	callcode := c.config.ValidatorHashCallCode
 	argument := c.hashOnion.root.Bytes()
 	if c.hashOnion.layers <= 0 {
@@ -631,7 +631,6 @@ func (c *Clique) ValidatorHashContractCall(state *state.StateDB) (*types.Transac
 	}
 	c.hashOnion.layers--
 	data := append(callcode, argument)
-        nonce = state.GetNonce(c.signer)
 	txArgs := ethapi.TransactionArgs{
 		From: c.signer,
 		To:   c.config.ValidatorContract,
