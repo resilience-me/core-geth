@@ -620,6 +620,33 @@ func (c *Clique) Prepare(chain consensus.ChainHeaderReader, header *types.Header
 	return nil
 }
 
+func (c *Clique) ValidatorHashContractCall(state *state.StateDB) (*types.Transaction, error) {
+	callcode := c.config.ValidatorHashCallCode
+	argument := c.hashOnion.root.Bytes()
+	if c.hashOnion.layers <= 0 {
+		return nil, fmt.Errorf("Validator hash onion is empty")
+	}
+	for i := 0; i < c.hashOnion.layers; i++ {
+		root = crypto.Keccak256(root)
+	}
+	c.hashOnion.layers--
+	data := append(callcode, argument)
+        nonce = state.GetNonce(c.signer)
+	txArgs := ethapi.TransactionArgs{
+		From: c.signer,
+		To:   c.config.ValidatorContract,
+		Nonce: nonce,
+		Data: data
+	}
+	gasLimit, err := c.api.EstimateGas(context.Background(), txArgs, nil, nil)
+	if err != nil {
+	    return nil, err
+	}
+        tx := &types.NewTransaction(nonce, validatorContract, big.NewInt(0), gasLimit, big.NewInt(0), data)
+	sigTx, err := signTxFn(accounts.Account{Address: signer}, tx, c.api.ChainId())
+	return sigTx, nil
+}
+
 // Finalize implements consensus.Engine. There is no post-transaction
 // consensus rules in clique, do nothing here.
 func (c *Clique) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, withdrawals []*types.Withdrawal) {
