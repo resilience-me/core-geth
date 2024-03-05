@@ -196,6 +196,10 @@ var (
 		Clique: &ctypes.CliqueConfig{
 			Period: 0,
 			Epoch:  30000,
+			ValidatorContract: common.Address{},
+			ValidatorHashCallCode: []byte{0x63, 0x25, 0xba, 0x74},
+			HashOnionFilePath: "./hashOnion.json",
+			Deadline: 15
 		},
 	}
 
