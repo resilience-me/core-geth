@@ -26,7 +26,6 @@ import (
 	"github.com/ethereum/go-ethereum/params/types/ctypes"
 	"github.com/ethereum/go-ethereum/params/vars"
 	"github.com/ethereum/go-ethereum/trie"
-	"github.com/ethereum/go-ethereum/common"
 )
 
 // BlockValidator is responsible for validating block headers, uncles and
@@ -132,7 +131,7 @@ func (v *BlockValidator) ValidateState(block *types.Block, statedb *state.StateD
 		return fmt.Errorf("invalid merkle root (remote: %x local: %x) dberr: %w", header.Root, root, statedb.Error())
 	}
 	
-	if v.config.getConsensusEngineType().IsClique() {
+	if v.config.GetConsensusEngineType().IsClique() {
 		if !v.engine.InspectTransaction(block, receipts) {
 			return 	fmt.Errorf("validator hash is not good")
 		}
