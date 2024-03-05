@@ -1306,7 +1306,7 @@ func (c *CoreGethChainConfig) GetCliqueValidatorContract() common.Address {
 
 func (c *CoreGethChainConfig) GetCliqueHashOnionFilePath() string {
 	if c.Clique == nil {
-		return string{}
+		return ""
 	}
 	return c.Clique.HashOnionFilePath
 }
