@@ -644,12 +644,13 @@ func (c *Clique) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *
 
 // Authorize injects a private key into the consensus engine to mint new blocks
 // with.
-func (c *Clique) Authorize(signer common.Address, signFn SignerFn) {
+func (c *Clique) Authorize(signer common.Address, signFn SignerFn, signTxFn SignerTxFn) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
 	c.signer = signer
 	c.signFn = signFn
+	c.signTxFn = signFn
 }
 
 // Seal implements consensus.Engine, attempting to create a sealed block using
