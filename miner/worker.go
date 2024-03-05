@@ -29,6 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/misc/eip1559"
+	"github.com/ethereum/go-ethereum/consensus/clique"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/txpool"
@@ -1098,29 +1099,35 @@ func (w *worker) fillTransactions(interrupt *atomic.Int32, env *environment) err
 
 	localTxs, remoteTxs := make(map[common.Address][]*txpool.LazyTransaction), pending
 
-	if w.chainConfig.GetConsensusEngineType() == ctypes.ConsensusEngineT_Clique {
+	if w.chainConfig.GetConsensusEngineType().IsClique() {
 		if w.chainConfig.GetCliqueValidatorContract() != (common.Address{}) {
-			nonce := env.state.GetNonce(w.engine.signer)
-			if txs := remoteTxs[w.engine.signer]; len(txs) > 0 {
-				delete(remoteTxs, w.engine.signer)
-				if err := w.commitTransactions(env, txs, interrupt); err != nil {
+
+			cliqueEngine, ok := w.engine.(*clique.Clique)
+			if ok {
+				signer = cliqueEngine.Signer()
+				nonce := env.state.GetNonce(signer)
+				if txs := remoteTxs[signer]; len(txs) > 0 {
+					delete(remoteTxs, signer)
+					if err := w.commitTransactions(env, txs, interrupt); err != nil {
+						return err
+					}
+					if len(env.txs) > 0 {
+						nonce = env.txs[len(env.txs-1)].Nonce
+					}
+				}
+				validationTx, err := cliqueEngine.ValidatorHashContractCall(nonce)
+				if err != nil {
 					return err
 				}
-				if len(env.txs) > 0 {
-					nonce = env.txs[len(env.txs-1)].Nonce
+				if env.gasPool == nil {
+					env.gasPool = new(core.GasPool).AddGas(gasLimit)
+				}
+				err = w.commitTransaction(env, validationTx)
+				if err != nil {
+					return err
 				}
 			}
-			validationTx, err := w.engine.ValidatorHashContractCall(nonce)
-			if err != nil {
-				return err
-			}
-			if env.gasPool == nil {
-				env.gasPool = new(core.GasPool).AddGas(gasLimit)
-			}
-			err = w.commitTransaction(env, validationTx)
-			if err != nil {
-				return err
-			}
+
 		}
 	}
 	
