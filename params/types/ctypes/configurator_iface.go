@@ -319,6 +319,7 @@ type CliqueConfigurator interface {
 	SetCliquePeriod(n uint64) error
 	GetCliqueEpoch() uint64
 	SetCliqueEpoch(n uint64) error
+	GetCliqueValidatorContract() common.Address
 }
 
 type Lyra2Configurator interface {
