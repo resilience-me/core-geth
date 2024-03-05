@@ -484,7 +484,7 @@ func (c *Clique) VerifyUncles(chain consensus.ChainReader, block *types.Block) e
 // from.
 func (c *Clique) verifySeal(snap *Snapshot, header *types.Header, parents []*types.Header) error {
 	// Verifying the genesis block is not supported
-	number := header.Number.Uint64()
+	number := header.Number.Int64()
 	if number == 0 {
 		return errUnknownBlock
 	}
@@ -496,7 +496,7 @@ func (c *Clique) verifySeal(snap *Snapshot, header *types.Header, parents []*typ
 	skipped := new(big.Int).Sub(big.NewInt(1), header.Difficulty)
 
 	if c.config.ValidatorContract != (common.Address{}) {
-		validator := c.getValidator(skipped.Uint64(), new(big.Int).SetUint64(number));
+		validator := c.getValidator(skipped.Uint64(), number);
 		if validator != signer {
 			return fmt.Errorf("validator does not equal getValidator")
 		}
@@ -616,7 +616,7 @@ func (c *Clique) Seal(chain consensus.ChainHeaderReader, block *types.Block, res
 	log.Trace("Waiting for slot to sign and propagate", "delay", common.PrettyDuration(delay))
 	
 	go func() {
-		number := header.Number.Uint64()
+		number := header.Number.Int64()
 		var validator common.Address
 		i := 0
 		loop:
@@ -628,7 +628,7 @@ func (c *Clique) Seal(chain consensus.ChainHeaderReader, block *types.Block, res
 				if c.config.ValidatorContract == (common.Address{}) {
 					break loop
 				}
-				validator = c.getValidator(uint64(i), new(big.Int).SetUint64(number));
+				validator = c.getValidator(uint64(i), number);
 				if validator == signer {
 					break loop
 				}
@@ -649,7 +649,7 @@ func (c *Clique) Seal(chain consensus.ChainHeaderReader, block *types.Block, res
 	return nil
 }
 
-func (c *Clique) getValidator(skipped uint64, blockNumber *big.Int) common.Address {
+func (c *Clique) getValidator(skipped uint64, blockNumber int64) common.Address {
     buf := make([]byte, 8)
     binary.BigEndian.PutUint64(buf, skipped)
     data := hexutil.Bytes(append(c.config.GetValidatorCallCode, buf...))
@@ -658,7 +658,10 @@ func (c *Clique) getValidator(skipped uint64, blockNumber *big.Int) common.Addre
 	To:   &c.config.ValidatorContract,
 	Data: &(data),
     }
-    c.api.Call(context.Background(), txArgs, c.api.BlockNumber(), nil, nil)
+    addr, _ := c.api.Call(context.Background(), txArgs, rpc.BlockNumberOrHashWithNumber(rpc.BlockNumber(blockNumber)), nil, nil)
+    var validator common.Address
+    copy(validator[:], addr[:len(common.Address{})])
+    return validator
 }
 
 // CalcDifficulty is the difficulty adjustment algorithm. It returns the difficulty
