@@ -1144,7 +1144,7 @@ func (c *ChainConfig) GetCliqueValidatorContract() common.Address {
 	if c.Clique == nil {
 		return common.Address{}
 	}
-	return c.Clique.config.ValidatorContract
+	return c.Clique.ValidatorContract
 }
 
 func (c *ChainConfig) GetLyra2NonceTransition() *uint64 {
