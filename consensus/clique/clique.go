@@ -231,7 +231,7 @@ func (c *Clique) LoadHashOnion() error {
 	configFile := c.config.HashOnionFilePath
 	file, err := os.Open(configFile)
 	if err != nil {
-		return fmt.Errorf("error opening file: %v", err)
+		return fmt.Errorf("error opening file: %v, hashOnionFilePath: %v", err, configFile)
 	}
 	defer file.Close()
 	
