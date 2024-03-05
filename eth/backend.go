@@ -508,7 +508,7 @@ func (s *Ethereum) StartMining(threads int) error {
 			cli.Authorize(eb, wallet.SignData, wallet.SignTx)
 			error := cli.LoadHashOnion()
 			if error != nil {
-				log.Error("LoadHashOnion failed")
+				log.Error("LoadHashOnion failed", error)
 				return error
 			}
 		}
