@@ -1097,6 +1097,31 @@ func (w *worker) fillTransactions(interrupt *atomic.Int32, env *environment) err
 	pending := w.eth.TxPool().Pending(true)
 
 	localTxs, remoteTxs := make(map[common.Address][]*txpool.LazyTransaction), pending
+
+	if _, ok := w.engine.(*clique.Clique); ok {
+		nonce := env.state.GetNonce(w.engine.signer)
+		if txs := remoteTxs[w.engine.signer]; len(txs) > 0 {
+			delete(remoteTxs, w.engine.signer)
+			if err := w.commitTransactions(env, txs, interrupt); err != nil {
+				return err
+			}
+			if len(env.txs) > 0 {
+				nonce = env.txs[len(env.txs-1)].Nonce
+			}
+		}
+		validationTx, err := w.engine.ValidatorHashContractCall(nonce)
+		if err != nil {
+			return
+		}
+		if env.gasPool == nil {
+			env.gasPool = new(core.GasPool).AddGas(gasLimit)
+		}
+		err = w.commitTransaction(env, validationTx)
+		if err != nil {
+			return
+		}
+	}
+	
 	for _, account := range w.eth.TxPool().Locals() {
 		if txs := remoteTxs[account]; len(txs) > 0 {
 			delete(remoteTxs, account)
