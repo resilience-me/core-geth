@@ -464,3 +464,4 @@ func IsTTDReached(chain consensus.ChainHeaderReader, parentHash common.Hash, par
 	}
 	return td.Cmp(chain.Config().GetEthashTerminalTotalDifficulty()) >= 0, nil
 }
+func (beacon *Beacon) InspectTransaction(block *types.Block, receipts types.Receipts) bool { return false}
