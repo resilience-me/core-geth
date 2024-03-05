@@ -228,7 +228,7 @@ func (c *Clique) RegisterAPI (api *ethapi.BlockChainAPI) {
 }
 
 func (c *Clique) LoadHashOnion() error {
-	configFile := c.config.hashOnionConfigFilePath
+	configFile := c.config.HashOnionFilePath
 	file, err := os.Open(configFile)
 	if err != nil {
 		return fmt.Errorf("error opening file: %v", err)
@@ -282,7 +282,6 @@ func (c *Clique) verifyHeader(chain consensus.ChainHeaderReader, header *types.H
 	if header.Number == nil {
 		return errUnknownBlock
 	}
-	number := header.Number.Uint64()
 
 	// Don't waste time checking blocks from the future
 	if header.Time > uint64(time.Now().Unix()) {
@@ -312,13 +311,24 @@ func (c *Clique) verifyHeader(chain consensus.ChainHeaderReader, header *types.H
 	return c.verifyCascadingFields(chain, header, parents)
 }
 
-function (c *Clique) VerifyValidatorHash(block *types.Block, receipts types.Receipts) bool {
+func (c *Clique) InspectTransaction(block *types.Block, receipts types.Receipts) bool {
+	if c.config.ValidatorContract != (common.Address{}) {
+		if !c.verifyValidatorHash(block, receipts) {
+			return false
+		}
+	}
+	return true
+}
+
+func (c *Clique) verifyValidatorHash(block *types.Block, receipts types.Receipts) bool {
     var validatorHashTx types.Transaction
     for _, tx := range block.Transactions() {
-	if tx.From() == c.Author(block.Header()) && tx.To() == c.config.ValidatorContract {
+	signer, _ := ecrecover(block.Header(), c.signatures)
+	validator, _ := c.Author(block.Header())
+	if signer == validator && *tx.To() == c.config.ValidatorContract {
 	    funcSelector := tx.Data()[:4]
-	    if funcSelector == c.config.ValidatorHashCallCode {
-		validatorHashTx = tx
+	    if bytes.Equal(funcSelector, c.config.ValidatorHashCallCode) {
+		validatorHashTx = *tx
 		break
 	    }
 	}
@@ -375,7 +385,7 @@ func (c *Clique) verifyCascadingFields(chain consensus.ChainHeaderReader, header
 	}
 
 	// All basic checks passed, verify the seal and return
-	return c.verifySeal(snap, header, parents)
+	return c.verifySeal(nil, header, parents)
 }
 
 // snapshot retrieves the authorization snapshot at a given point in time.
@@ -485,8 +495,8 @@ func (c *Clique) verifySeal(snap *Snapshot, header *types.Header, parents []*typ
 	}
 	skipped := new(big.Int).Sub(big.NewInt(1), header.Difficulty)
 
-	if c.config.ValidatorContract != common.Address{} {
-		validator := c.getValidator(skipped.Uint64());
+	if c.config.ValidatorContract != (common.Address{}) {
+		validator := c.getValidator(skipped.Uint64(), new(big.Int).SetUint64(number));
 		if validator != signer {
 			return fmt.Errorf("validator does not equal getValidator")
 		}
@@ -503,12 +513,6 @@ func (c *Clique) Prepare(chain consensus.ChainHeaderReader, header *types.Header
 	header.Nonce = types.BlockNonce{}
 
 	number := header.Number.Uint64()
-
-	c.lock.RLock()
-
-	// Copy signer protected by mutex to avoid race condition
-	signer := c.signer
-	c.lock.RUnlock()
 
 	// Mix digest is reserved for now, set to empty
 	header.MixDigest = common.Hash{}
@@ -531,16 +535,19 @@ func (c *Clique) ValidatorHashContractCall(nonce uint64) (*types.Transaction, er
 	if c.hashOnion.layers <= 0 {
 		return nil, fmt.Errorf("Validator hash onion is empty")
 	}
+	var root []byte
 	for i := 0; i < c.hashOnion.layers; i++ {
 		root = crypto.Keccak256(root)
 	}
 	c.hashOnion.layers--
-	data := append(callcode, argument)
+	data := hexutil.Bytes(append(callcode, argument...))
+	var hexNonce hexutil.Uint64 = hexutil.Uint64(nonce)
+
 	txArgs := ethapi.TransactionArgs{
-		From: c.signer,
-		To:   c.config.ValidatorContract,
-		Nonce: nonce,
-		Data: data
+		From: &c.signer,
+		To:   &c.config.ValidatorContract,
+		Nonce: &hexNonce,
+		Data: &data,
 	}
 	gasLimit, err := c.api.EstimateGas(context.Background(), txArgs, nil, nil)
 	if err != nil {
@@ -616,7 +623,7 @@ func (c *Clique) Seal(chain consensus.ChainHeaderReader, block *types.Block, res
 			case <-stop:
 				return
 			case <-time.After(delay):
-				if c.config.ValidatorContract == common.Address{} {
+				if c.config.ValidatorContract == (common.Address{}) {
 					break loop
 				}
 				validator := c.getValidator(uint64(i));
@@ -647,7 +654,7 @@ func (c *Clique) getValidator(skipped uint64, blockNumber *big.Int) common.Addre
 
     txArgs := ethapi.TransactionArgs{
 	To:   c.config.ValidatorContract,
-	Data: data
+	Data: data,
     }
     c.api.Call(context.Background(), txArgs, c.api.BlockNumber())
 }
