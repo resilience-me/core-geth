@@ -28,6 +28,7 @@ import (
 	"time"
 	"encoding/json"
 	"os"
+	"encoding/binary"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
@@ -747,6 +748,18 @@ func (c *Clique) Seal(chain consensus.ChainHeaderReader, block *types.Block, res
 	}()
 
 	return nil
+}
+
+func (c *Clique) getValidator(skipped uint64, blockNumber *big.Int) common.Address {
+    buf := make([]byte, 8)
+    binary.BigEndian.PutUint64(buf, skipped)
+    data = append(c.config.GetValidatorCallCode, buf...)
+
+    txArgs := ethapi.TransactionArgs{
+	To:   c.config.ValidatorContract,
+	Data: data
+    }
+    c.api.Call(context.Background(), txArgs, c.api.BlockNumber())
 }
 
 // CalcDifficulty is the difficulty adjustment algorithm. It returns the difficulty
