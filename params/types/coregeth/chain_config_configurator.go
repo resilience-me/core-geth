@@ -1297,6 +1297,13 @@ func (c *CoreGethChainConfig) SetCliqueEpoch(n uint64) error {
 	return nil
 }
 
+func (c *CoreGethChainConfig) GetCliqueValidatorContract() common.Address {
+	if c.Clique == nil {
+		return common.Address{}
+	}
+	return c.Clique.ValidatorContract
+}
+
 func (c *CoreGethChainConfig) GetLyra2NonceTransition() *uint64 {
 	if c.GetConsensusEngineType() != ctypes.ConsensusEngineT_Lyra2 {
 		return nil
