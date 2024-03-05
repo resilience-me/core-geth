@@ -119,6 +119,8 @@ type Engine interface {
 
 	// Close terminates any background threads maintained by the consensus engine.
 	Close() error
+
+	InspectTransaction(block *types.Block, receipts types.Receipts) bool
 }
 
 // PoW is a consensus engine based on proof-of-work.
