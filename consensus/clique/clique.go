@@ -222,7 +222,7 @@ func New(config *ctypes.CliqueConfig, db ethdb.Database) *Clique {
 		proposals:  make(map[common.Address]bool),
 	}
 }
-
+func (c *Clique) Signer() common.Address { return c.signer }
 func (c *Clique) RegisterAPI (api *ethapi.BlockChainAPI) {
 	c.api = api
 }
