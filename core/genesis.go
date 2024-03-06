@@ -261,8 +261,8 @@ func LoadCliqueConfig(db ethdb.Database, genesis *genesisT.Genesis) (*ctypes.Cli
 			return &ctypes.CliqueConfig{
 				Period: genesis.Config.GetCliquePeriod(),
 				Epoch:  genesis.Config.GetCliqueEpoch(),
-				ValidatorContract: storedcfg.GetCliqueValidatorContract(),
-				HashOnionFilePath: storedcfg.GetCliqueHashOnionFilePath(),
+				ValidatorContract: genesis.Config.GetCliqueValidatorContract(),
+				HashOnionFilePath: genesis.Config.GetCliqueHashOnionFilePath(),
 			}, nil
 		}
 	}
