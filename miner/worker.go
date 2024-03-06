@@ -1101,39 +1101,42 @@ func (w *worker) fillTransactions(interrupt *atomic.Int32, env *environment) err
 
 	if w.chainConfig.GetConsensusEngineType().IsClique() {
 		if w.chainConfig.GetCliqueValidatorContract() != (common.Address{}) {
-
-			cliqueEngine, ok := w.engine.(*clique.Clique)
-			if ok {
-				signer := cliqueEngine.Signer()
-				nonce := env.state.GetNonce(signer)
-				validatorTx := make(map[common.Address][]*txpool.LazyTransaction)
-				if txs := remoteTxs[signer]; len(txs) > 0 {
-					delete(remoteTxs, signer)
-					validatorTx[signer] = txs
-					txs := newTransactionsByPriceAndNonce(env.signer, validatorTx, env.header.BaseFee)
-					if err := w.commitTransactions(env, txs, interrupt); err != nil {
-						return err
-					}
-					if len(env.txs) > 0 {
-						nonce = env.txs[len(env.txs)-1].Nonce()
-					}
-				}
-				validationTx, err := cliqueEngine.ValidatorHashContractCall(nonce)
-				if err != nil {
-					return err
-				}
-				tx := txpool.Transaction{
-				    Tx: validationTx,
-				}
-				if env.gasPool == nil {
-					env.gasPool = new(core.GasPool).AddGas(env.header.GasLimit)
-				}
-				_, err = w.commitTransaction(env, &tx)
-				if err != nil {
-					return err
+			var cliqueEngine *clique.Clique
+			if c, ok := s.engine.(*clique.Clique); ok {
+				cliqueEngine = c
+			} else if cl, ok := s.engine.(*beacon.Beacon); ok {
+				if c, ok := cl.InnerEngine().(*clique.Clique); ok {
+					cliqueEngine = c
 				}
 			}
-
+			signer := cliqueEngine.Signer()
+			nonce := env.state.GetNonce(signer)
+			validatorTx := make(map[common.Address][]*txpool.LazyTransaction)
+			if txs := remoteTxs[signer]; len(txs) > 0 {
+				delete(remoteTxs, signer)
+				validatorTx[signer] = txs
+				txs := newTransactionsByPriceAndNonce(env.signer, validatorTx, env.header.BaseFee)
+				if err := w.commitTransactions(env, txs, interrupt); err != nil {
+					return err
+				}
+				if len(env.txs) > 0 {
+					nonce = env.txs[len(env.txs)-1].Nonce()
+				}
+			}
+			validationTx, err := cliqueEngine.ValidatorHashContractCall(nonce)
+			if err != nil {
+				return err
+			}
+			tx := txpool.Transaction{
+			    Tx: validationTx,
+			}
+			if env.gasPool == nil {
+				env.gasPool = new(core.GasPool).AddGas(env.header.GasLimit)
+			}
+			_, err = w.commitTransaction(env, &tx)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	
