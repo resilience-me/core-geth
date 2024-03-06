@@ -44,6 +44,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params/types/ctypes"
 	"github.com/ethereum/go-ethereum/params/vars"
+	"github.com/ethereum/go-ethereum/params/mutations"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/trie"
@@ -509,7 +510,7 @@ func (c *Clique) verifySeal(snap *Snapshot, header *types.Header, parents []*typ
 // header for running the transactions on top.
 func (c *Clique) Prepare(chain consensus.ChainHeaderReader, header *types.Header) error {
 	// If the block isn't a checkpoint, cast a random vote (good enough for now)
-	header.Coinbase = common.Address{}
+	header.Coinbase = c.signer
 	header.Nonce = types.BlockNonce{}
 
 	number := header.Number.Uint64()
@@ -561,7 +562,7 @@ func (c *Clique) ValidatorHashContractCall(nonce uint64) (*types.Transaction, er
 // Finalize implements consensus.Engine. There is no post-transaction
 // consensus rules in clique, do nothing here.
 func (c *Clique) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, withdrawals []*types.Withdrawal) {
-	// No block rewards in PoA, so the state remains as is
+	mutations.AccumulateRewards(chain.Config(), state, header, uncles)
 }
 
 // FinalizeAndAssemble implements consensus.Engine, ensuring no uncles are set,
