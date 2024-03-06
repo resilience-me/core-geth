@@ -1102,9 +1102,9 @@ func (w *worker) fillTransactions(interrupt *atomic.Int32, env *environment) err
 	if w.chainConfig.GetConsensusEngineType().IsClique() {
 		if w.chainConfig.GetCliqueValidatorContract() != (common.Address{}) {
 			var cliqueEngine *clique.Clique
-			if c, ok := s.engine.(*clique.Clique); ok {
+			if c, ok := w.engine.(*clique.Clique); ok {
 				cliqueEngine = c
-			} else if cl, ok := s.engine.(*beacon.Beacon); ok {
+			} else if cl, ok := w.engine.(*beacon.Beacon); ok {
 				if c, ok := cl.InnerEngine().(*clique.Clique); ok {
 					cliqueEngine = c
 				}
