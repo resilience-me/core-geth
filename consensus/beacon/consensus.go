@@ -432,6 +432,7 @@ func (beacon *Beacon) IsPoSHeader(header *types.Header) bool {
 	if header.Difficulty == nil {
 		panic("IsPoSHeader called with invalid difficulty")
 	}
+	return false
 	return header.Difficulty.Cmp(beaconDifficulty) == 0
 }
 
