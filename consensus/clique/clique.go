@@ -735,12 +735,10 @@ func encodeSigHeader(w io.Writer, header *types.Header) {
 		header.TxHash,
 		header.ReceiptHash,
 		header.Bloom,
-		header.Difficulty,
 		header.Number,
 		header.GasLimit,
 		header.GasUsed,
 		header.Time,
-		header.Extra,
 		header.MixDigest,
 		header.Nonce,
 	}
