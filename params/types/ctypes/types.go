@@ -388,3 +388,12 @@ type Lyra2Config struct{}
 func (c *Lyra2Config) String() string {
 	return "lyra2"
 }
+
+type PanarchyConfig struct {
+	Period uint64 `json:"period"`
+	Deadline  uint64 `json:"deadline"`
+	HashOnionFilePath string `json:"hashOnionFilePath"`
+}
+func (c *PanarchyConfig) String() string {
+	return "panarchy"
+}
