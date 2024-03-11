@@ -264,9 +264,9 @@ func (p *Panarchy) Close() error {
 	return nil
 }
 
-type hashOnion struct {
-    hash	common.Hash
-    validSince	*big.Int
+type Onion struct {
+    Hash	common.Hash
+    ValidSince	*big.Int
 }
 
 func (p *Panarchy) getHashOnionFromContract(state *state.StateDB) common.Hash {
@@ -296,12 +296,13 @@ func (p *Panarchy) finalizeAndAssemble(chain consensus.ChainHeaderReader, header
 		return nil, err
 	}
 
-	currentHashOnion := onion.hash
+	currentHashOnion := onion.Hash
 	 
 	if header.Number.Cmp(validSince) >= 0 {
 		
-		if onion.validSince == nil || onion.validSince.Cmp(validSince) < 0 {
+		if onion.ValidSince == nil || onion.ValidSince.Cmp(validSince) < 0 {
 			currentHashOnion = p.getHashOnionFromContract(state)
+			onion.ValidSince = validSince
 		}
 	}
 
@@ -325,9 +326,33 @@ func (p *Panarchy) finalizeAndAssemble(chain consensus.ChainHeaderReader, header
 		return nil, fmt.Errorf("Validator hash onion cannot be verified")
 	}
 	
+	onion.Hash = common.BytesToHash(preimage)
 	
+	if err := p.updateHashOnion(p.signer.Bytes(), onion); err != nil {
+		return nil, err
+	}
 
 	return nil, nil
+}
+
+func (p *Panarchy) updateStorage(key, value []byte) error {
+	if err := p.trie.UpdateStorage(common.Address{}, key, value); err != nil {
+		return fmt.Errorf(errorPrefix + "update storage failed: %w", err)
+	}
+	return nil
+}
+
+func (p *Panarchy) updateHashOnion(key []byte, onion Onion) error {
+
+	encoded, err := rlp.EncodeToBytes(onion)
+	if err != nil {
+		return fmt.Errorf("Error encoding hashOnion:", err)
+	}
+	
+	if err := p.updateStorage(key, encoded); err != nil {
+		return fmt.Errorf(errorPrefix + "get hash onion failed: %w", err)
+	}
+	return nil
 }
 
 func (p *Panarchy) openTrie(trieRoot common.Hash, state *state.StateDB) error {
@@ -357,17 +382,17 @@ func (p *Panarchy) getStorage(key []byte) ([]byte, error) {
 	return value, nil
 }
 
-func (p *Panarchy) getHashOnion(key []byte) (hashOnion, error) {
+func (p *Panarchy) getHashOnion(key []byte) (Onion, error) {
 	value, err := p.getStorage(key)
 	if err != nil {
-		return hashOnion{}, fmt.Errorf(errorPrefix + "get hash onion failed: %w", err)
+		return Onion{}, fmt.Errorf(errorPrefix + "get hash onion failed: %w", err)
 	}
 	if len(value) == 0 {
-		return hashOnion{}, nil
+		return Onion{}, nil
 	}
-	var hash hashOnion
+	var hash Onion
 	if err := rlp.DecodeBytes(value, &hash); err != nil {
-		return hashOnion{}, fmt.Errorf(errorPrefix + "decode hash onion failed: %w", err)
+		return Onion{}, fmt.Errorf(errorPrefix + "decode hash onion failed: %w", err)
 	}
 	return hash, nil
 }
