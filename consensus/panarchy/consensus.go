@@ -25,9 +25,9 @@ type HashOnion struct {
 
 type Panarchy struct {
 	config *ctypes.PanarchyConfig
-  trie Trie
-  contract ValidatorContract
-  hashOnion HashOnion
+	trie Trie
+	contract ValidatorContract
+	hashOnion HashOnion
 }
 
 func pad(val []byte) []byte {
