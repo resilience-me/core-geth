@@ -296,15 +296,15 @@ func (p *Panarchy) finalizeAndAssemble(chain consensus.ChainHeaderReader, header
 		return nil, err
 	}
 
-	hashOnion := onion.hash
+	currentHashOnion := onion.hash
 	 
 	if header.Number.Cmp(validSince) >= 0 {
 		
 		if onion.validSince == nil || onion.validSince.Cmp(validSince) < 0 {
-			hashOnion = p.getHashOnionFromContract(state)
+			currentHashOnion = p.getHashOnionFromContract(state)
 		}
 	}
-	log.Info(p.getHashOnionFromContract(state).Hex())
+
 	if p.hashOnion.Layers <= 0 {
 		return nil, fmt.Errorf("Validator hash onion is empty")
 	}
@@ -312,10 +312,17 @@ func (p *Panarchy) finalizeAndAssemble(chain consensus.ChainHeaderReader, header
 	for i := 0; i < p.hashOnion.Layers; i++ {
 		root = crypto.Keccak256(root)
 	}
-	hashOnionLocal := common.BytesToHash(root)
 	
-	if hashOnion == common.BytesToHash(root) {
+	ifReorg := 10;
+	for currentHashOnion != common.BytesToHash(root){
+		root = crypto.Keccak256(root)
+		ifReorg--
+		if ifReorg == 0 {
+			return nil, fmt.Errorf("Validator hash onion cannot be verified")
+		}
 	}
+
+	
 
 	return nil, nil
 }
