@@ -308,20 +308,23 @@ func (p *Panarchy) finalizeAndAssemble(chain consensus.ChainHeaderReader, header
 	if p.hashOnion.Layers <= 0 {
 		return nil, fmt.Errorf("Validator hash onion is empty")
 	}
-	root := p.hashOnion.Root.Bytes()
-	for i := 0; i < p.hashOnion.Layers; i++ {
-		root = crypto.Keccak256(root)
+	preimage := p.hashOnion.Root.Bytes()
+	for i := 0; i < p.hashOnion.Layers-1; i++ {
+		preimage = crypto.Keccak256(preimage)
+	}
+	var hash []byte
+	for i := 0; i < 10; i++ {
+		hash = crypto.Keccak256(preimage)
+
+		if currentHashOnion == common.BytesToHash(hash) {
+			break
+		}
+		preimage = hash
+	}
+	if currentHashOnion != common.BytesToHash(hash) {
+		return nil, fmt.Errorf("Validator hash onion cannot be verified")
 	}
 	
-	ifReorg := 10;
-	for currentHashOnion != common.BytesToHash(root){
-		root = crypto.Keccak256(root)
-		ifReorg--
-		if ifReorg == 0 {
-			return nil, fmt.Errorf("Validator hash onion cannot be verified")
-		}
-	}
-
 	
 
 	return nil, nil
