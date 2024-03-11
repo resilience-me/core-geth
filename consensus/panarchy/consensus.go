@@ -7,6 +7,10 @@ import (
 	"github.com/ethereum/go-ethereum/params/vars"
 )
 
+var (
+	errOlderBlockTime    = errors.New("timestamp older than parent")
+}
+
 type StorageSlots {
 	election []byte
 	hashOnion []byte
@@ -88,7 +92,7 @@ func (p *Panarchy) Authorize(signer common.Address, signFn SignerFn) {
 
 
 func (p *Panarchy) VerifyHeader(chain consensus.ChainHeaderReader, header *types.Header, seal bool) error {
-	return p.verifyHeader(chain, header, nil)
+	return p.verifyHeader(chain, header)
 }
 func (p *Panarchy) VerifyHeaders(chain consensus.ChainHeaderReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
 	abort := make(chan struct{})
@@ -96,7 +100,7 @@ func (p *Panarchy) VerifyHeaders(chain consensus.ChainHeaderReader, headers []*t
 
 	go func() {
 		for i, header := range headers {
-			err := p.verifyHeader(chain, header, headers[:i])
+			err := p.verifyHeader(chain, header)
 
 			select {
 			case <-abort:
@@ -108,10 +112,27 @@ func (p *Panarchy) VerifyHeaders(chain consensus.ChainHeaderReader, headers []*t
 	return abort, results
 }
 
-func (p *Panarchy) verifyHeader(chain consensus.ChainHeaderReader, header *types.Header, parents []*types.Header) error {
+func (p *Panarchy) verifyHeader(chain consensus.ChainHeaderReader, header *types.Header) error {
+	if header.Time > uint64(time.Now().Unix()) {
+		return consensus.ErrFutureBlock
+	}
+	number := header.Number.Uint64()
+	if number == 0 {
+		return nil
+	}
+	parent := chain.GetHeader(header.ParentHash, number-1)
 
+	if parent == nil || parent.Number.Uint64() != number-1 || parent.Hash() != header.ParentHash {
+		return consensus.ErrUnknownAncestor
+	}
+	if parent.Time+p.config.Period > header.Time {
+		return errInvalidTimestamp
+	}
 	if header.GasLimit > vars.MaxGasLimit {
 		return fmt.Errorf("invalid gasLimit: have %v, max %v", header.GasLimit, vars.MaxGasLimit)
+	}
+	if header.GasUsed > header.GasLimit {
+		return fmt.Errorf("invalid gasUsed: have %d, gasLimit %d", header.GasUsed, header.GasLimit)
 	}
 	return nil
 }
