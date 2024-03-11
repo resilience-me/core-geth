@@ -269,12 +269,20 @@ type hashOnion struct {
     validSince	*big.Int
 }
 
+func (p *Panarchy) getHashOnionFromContract(state *state.StateDB) common.Hash {
+	addrAndSlot := append(pad(p.signer.Bytes()), p.contract.slots.hashOnion...)
+	key := crypto.Keccak256Hash(addrAndSlot)
+	return state.GetState(p.contract.addr, key)
+}
+
 func (p *Panarchy) finalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) (*types.Block, error) {
 
 	addrAndSlot := append(pad(p.signer.Bytes()), p.contract.slots.validSince...)
 	key := crypto.Keccak256Hash(addrAndSlot)
 	data := state.GetState(p.contract.addr, key)
 	validSince := new(big.Int).SetBytes(data.Bytes())
+
+	var hashOnion common.Hash
 
 	if header.Number.Cmp(validSince) >= 0 {
 		
@@ -292,7 +300,7 @@ func (p *Panarchy) finalizeAndAssemble(chain consensus.ChainHeaderReader, header
 			return nil, err
 		}
 		if onion.validSince == nil || onion.validSince.Cmp(validSince) < 0 {
-			
+			hashOnion = p.getHashOnionFromContract(state)
 		}
 
 	}
