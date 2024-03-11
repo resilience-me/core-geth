@@ -1267,6 +1267,51 @@ func (c *CoreGethChainConfig) SetEthashBlockRewardSchedule(m ctypes.Uint64BigMap
 	return nil
 }
 
+func (c *CoreGethChainConfig) GetPanarchyPeriod() uint64 {
+	if c.Panarchy == nil {
+		return 0
+	}
+	return c.Panarchy.Period
+}
+
+func (c *CoreGethChainConfig) SetPanarchyPeriod(n uint64) error {
+	if c.Panarchy == nil {
+		return ctypes.ErrUnsupportedConfigFatal
+	}
+	c.Panarchy.Period = n
+	return nil
+}
+
+func (c *CoreGethChainConfig) GetPanarchyDeadline() uint64 {
+	if c.Panarchy == nil {
+		return 0
+	}
+	return c.Panarchy.Deadline
+}
+
+func (c *CoreGethChainConfig) SetPanarchyDeadline(n uint64) error {
+	if c.Panarchy == nil {
+		return ctypes.ErrUnsupportedConfigFatal
+	}
+	c.Panarchy.Deadline = n
+	return nil
+}
+
+func (c *CoreGethChainConfig) GetPanarchyHashOnionFilePath() string {
+	if c.Panarchy == nil {
+		return ""
+	}
+	return c.Panarchy.HashOnionFilePath
+}
+
+func (c *CoreGethChainConfig) SetPanarchyHashOnionFilePath(n string) error {
+	if c.Panarchy == nil {
+		return ctypes.ErrUnsupportedConfigFatal
+	}
+	c.Panarchy.HashOnionFilePath = n
+	return nil
+}
+
 func (c *CoreGethChainConfig) GetCliquePeriod() uint64 {
 	if c.Clique == nil {
 		return 0
