@@ -82,3 +82,57 @@ func (p *Panarchy) Authorize(signer common.Address, signFn SignerFn) {
 		log.Error("LoadHashOnion error:", err)
 	}
 }
+
+
+
+func (p *Panarchy) VerifyHeader(chain consensus.ChainHeaderReader, header *types.Header, seal bool) error {
+	return nil
+}
+func (p *Panarchy) VerifyHeaders(chain consensus.ChainHeaderReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
+	abort := make(chan struct{})
+	results := make(chan error, len(headers))
+
+	go func() {
+		for i, header := range headers {
+			err := p.verifyHeader(chain, header, headers[:i])
+
+			select {
+			case <-abort:
+				return
+			case results <- err:
+			}
+		}
+	}()
+	return abort, results
+}
+func (p *Panarchy) VerifyUncles(chain consensus.ChainReader, block *types.Block) error {
+	return nil
+}
+
+func (p *Panarchy) Prepare(chain consensus.ChainHeaderReader, header *types.Header) error {
+	return nil
+}
+
+func (p *Panarchy) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, withdrawals []*types.Withdrawal) {
+}
+
+
+func (p *Panarchy) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt, withdrawals []*types.Withdrawal) (*types.Block, error) {
+	return nil
+}
+
+func (p *Panarchy) Seal(chain consensus.ChainHeaderReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error {
+	return nil
+}
+func (p *Panarchy) SealHash(header *types.Header) common.Hash {
+	return common.Hash{}
+}
+func (p *Panarchy) CalcDifficulty(chain consensus.ChainHeaderReader, time uint64, parent *types.Header) *big.Int {
+	return nil
+}
+func (p *Panarchy) APIs(chain consensus.ChainHeaderReader) []rpc.API {
+	return []rpc.API{}
+}
+func (p *Panarchy) Close() error {
+	return nil
+}
