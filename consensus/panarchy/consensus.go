@@ -4,6 +4,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/params/vars"
 )
 
 type StorageSlots {
@@ -87,7 +88,7 @@ func (p *Panarchy) Authorize(signer common.Address, signFn SignerFn) {
 
 
 func (p *Panarchy) VerifyHeader(chain consensus.ChainHeaderReader, header *types.Header, seal bool) error {
-	return nil
+	return p.verifyHeader(chain, header, nil)
 }
 func (p *Panarchy) VerifyHeaders(chain consensus.ChainHeaderReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
 	abort := make(chan struct{})
@@ -106,6 +107,15 @@ func (p *Panarchy) VerifyHeaders(chain consensus.ChainHeaderReader, headers []*t
 	}()
 	return abort, results
 }
+
+func (p *Panarchy) verifyHeader(chain consensus.ChainHeaderReader, header *types.Header, parents []*types.Header) error {
+
+	if header.GasLimit > vars.MaxGasLimit {
+		return fmt.Errorf("invalid gasLimit: have %v, max %v", header.GasLimit, vars.MaxGasLimit)
+	}
+	return nil
+}
+
 func (p *Panarchy) VerifyUncles(chain consensus.ChainReader, block *types.Block) error {
 	return nil
 }
