@@ -39,14 +39,14 @@ func weeksToSeconds(weeks uint64) uint64 {
 
 func New(config *ctypes.PanarchyConfig, db ethdb.Database) *Panarchy {
 	return &Panarchy{
-    config: config,
+		config: config,
 		contract: ValidatorContract{
 			slots: StorageSlots{
 				election: pad([]byte{2}),
 				hashOnion: pad([]byte{3}),
 				validSince: pad([]byte{4}),
 			},
-      addr: common.HexToAddress("0x0000000000000000000000000000000000000020"),
+			addr: common.HexToAddress("0x0000000000000000000000000000000000000020"),
 			schedule: Schedule {
 				period: weeksToSeconds(4),
 			},
