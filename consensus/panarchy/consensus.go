@@ -304,6 +304,19 @@ func (p *Panarchy) finalizeAndAssemble(chain consensus.ChainHeaderReader, header
 			hashOnion = p.getHashOnionFromContract(state)
 		}
 	}
+	log.Info(p.getHashOnionFromContract(state).Hex())
+	if p.hashOnion.Layers <= 0 {
+		return nil, fmt.Errorf("Validator hash onion is empty")
+	}
+	root := p.hashOnion.Root.Bytes()
+	for i := 0; i < p.hashOnion.Layers; i++ {
+		root = crypto.Keccak256(root)
+	}
+	hashOnionLocal := common.BytesToHash(root)
+	
+	if hashOnion == common.BytesToHash(root) {
+	}
+
 	return nil, nil
 }
 
