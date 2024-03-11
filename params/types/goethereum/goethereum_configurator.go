@@ -1142,7 +1142,7 @@ func (c *ChainConfig) SetPanarchyDeadline(n uint64) error {
 
 func (c *ChainConfig) GetPanarchyHashOnionFilePath() string {
 	if c.Panarchy == nil {
-		return 0
+		return ""
 	}
 	return c.Panarchy.HashOnionFilePath
 }
