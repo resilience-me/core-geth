@@ -25,6 +25,8 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
+const errorPrefix = "consensus engine - "
+
 var (
 	errInvalidTimestamp = errors.New("invalid timestamp")
 	errMissingExtraData = errors.New("extra-data length is wrong")
@@ -178,7 +180,7 @@ func (p *Panarchy) Finalize(chain consensus.ChainHeaderReader, header *types.Hea
 }
 
 func (p *Panarchy) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt, withdrawals []*types.Withdrawal) (*types.Block, error) {
-	
+
 	return p.finalizeAndAssemble(chain, header, state)
 }
 
@@ -225,8 +227,18 @@ func (p *Panarchy) Author(header *types.Header) (common.Address, error) {
 	return ecrecover(header)
 }
 
+func extraDataLength(header *types.Header) error {
+	if len(header.Extra) != 129 {
+	        return errMissingExtraData
+	}
+	return nil
+}
+
 func ecrecover(header *types.Header) (common.Address, error) {
 
+	if err := extraDataLength(header); err != nil {
+		return common.Address{}, err
+	}
 	if len(header.Extra) != 129 {
 		return common.Address{}, errMissingExtraData
 	}
@@ -252,9 +264,79 @@ func (p *Panarchy) Close() error {
 	return nil
 }
 
+type hashOnion struct {
+    hash	common.Hash
+    validSince	*big.Int
+}
+
 func (p *Panarchy) finalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) (*types.Block, error) {
-	addrAndSlot := append(pad(p.signer[:]), p.contract.slots.validSince...)
+
+	addrAndSlot := append(pad(p.signer.Bytes()), p.contract.slots.validSince...)
 	key := crypto.Keccak256Hash(addrAndSlot)
-	validSince := state.GetState(p.contract.addr, key)
+	data := state.GetState(p.contract.addr, key)
+	validSince := new(big.Int).SetBytes(data.Bytes())
+
+	if header.Number.Cmp(validSince) >= 0 {
+		
+		parentHeader := chain.GetHeaderByHash(header.ParentHash)
+		
+		trieRoot, err := getTrieRoot(parentHeader)
+		if err != nil {
+			return nil, err
+		}
+		if err := p.openTrie(trieRoot, state); err != nil {
+			return nil, err
+		}
+		onion, err := p.getHashOnion(p.signer.Bytes())
+		if err != nil {
+			return nil, err
+		}
+		if onion.validSince == nil || onion.validSince.Cmp(validSince) < 0 {
+			
+		}
+
+	}
 	return nil, nil
+}
+
+func (p *Panarchy) openTrie(trieRoot common.Hash, state *state.StateDB) error {
+	var err error
+	p.trie, err = state.Database().OpenTrie(trieRoot)
+	if err != nil {
+		return fmt.Errorf(errorPrefix + "open trie failed: %w", err)
+	}
+	return nil
+}
+
+func getTrieRoot(header *types.Header) (common.Hash, error) {
+	if header.Number.Cmp(common.Big0) == 0 {
+		return common.Hash{}, nil
+	}
+	if err := extraDataLength(header); err != nil {
+		return common.Hash{}, err
+	}
+	return common.BytesToHash(header.Extra[97: 129]), nil
+}
+
+func (p *Panarchy) getStorage(key []byte) ([]byte, error) {
+	value, err := p.trie.GetStorage(common.Address{}, key)
+	if err != nil {
+		return nil, fmt.Errorf(errorPrefix + "get storage failed: %w", err)
+	}
+	return value, nil
+}
+
+func (p *Panarchy) getHashOnion(key []byte) (hashOnion, error) {
+	value, err := p.getStorage(key)
+	if err != nil {
+		return hashOnion{}, fmt.Errorf(errorPrefix + "get hash onion failed: %w", err)
+	}
+	if len(value) == 0 {
+		return hashOnion{}, nil
+	}
+	var hash hashOnion
+	if err := rlp.DecodeBytes(value, &hash); err != nil {
+		return hashOnion{}, fmt.Errorf(errorPrefix + "decode hash onion failed: %w", err)
+	}
+	return hash, nil
 }
