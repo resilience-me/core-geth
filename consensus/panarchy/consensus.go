@@ -11,18 +11,18 @@ import (
 
 var (
 	errInvalidTimestamp = errors.New("invalid timestamp")
-}
+)
 
-type StorageSlots {
+type StorageSlots struct {
 	election []byte
 	hashOnion []byte
 	validSince []byte
 }
-type Schedule {
+type Schedule struct {
 	genesis uint64
 	period uint64
 }
-type ValidatorContract {
+type ValidatorContract struct {
 	slots StorageSlots
 	addr common.Address
 	schedule Schedule
