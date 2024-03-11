@@ -727,6 +727,9 @@ func (c *CoreGethChainConfig) GetConsensusEngineType() ctypes.ConsensusEngineT {
 	if c.Ethash != nil {
 		return ctypes.ConsensusEngineT_Ethash
 	}
+	if c.Panarchy != nil {
+		return ctypes.ConsensusEngineT_Panarchy
+	}
 	if c.Clique != nil {
 		return ctypes.ConsensusEngineT_Clique
 	}
