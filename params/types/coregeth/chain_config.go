@@ -245,6 +245,7 @@ type CoreGethChainConfig struct {
 
 	// Various consensus engines
 	Ethash    *ctypes.EthashConfig `json:"ethash,omitempty"`
+	Panarchy    *ctypes.PanarchyConfig `json:"panarchy,omitempty"`
 	Clique    *ctypes.CliqueConfig `json:"clique,omitempty"`
 	Lyra2     *ctypes.Lyra2Config  `json:"lyra2,omitempty"`
 	IsDevMode bool                 `json:"isDev,omitempty"`
