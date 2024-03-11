@@ -282,27 +282,27 @@ func (p *Panarchy) finalizeAndAssemble(chain consensus.ChainHeaderReader, header
 	data := state.GetState(p.contract.addr, key)
 	validSince := new(big.Int).SetBytes(data.Bytes())
 
-	var hashOnion common.Hash
+	parentHeader := chain.GetHeaderByHash(header.ParentHash)
+	
+	trieRoot, err := getTrieRoot(parentHeader)
+	if err != nil {
+		return nil, err
+	}
+	if err := p.openTrie(trieRoot, state); err != nil {
+		return nil, err
+	}
+	onion, err := p.getHashOnion(p.signer.Bytes())
+	if err != nil {
+		return nil, err
+	}
 
+	hashOnion := onion.hash
+	 
 	if header.Number.Cmp(validSince) >= 0 {
 		
-		parentHeader := chain.GetHeaderByHash(header.ParentHash)
-		
-		trieRoot, err := getTrieRoot(parentHeader)
-		if err != nil {
-			return nil, err
-		}
-		if err := p.openTrie(trieRoot, state); err != nil {
-			return nil, err
-		}
-		onion, err := p.getHashOnion(p.signer.Bytes())
-		if err != nil {
-			return nil, err
-		}
 		if onion.validSince == nil || onion.validSince.Cmp(validSince) < 0 {
 			hashOnion = p.getHashOnionFromContract(state)
 		}
-
 	}
 	return nil, nil
 }
