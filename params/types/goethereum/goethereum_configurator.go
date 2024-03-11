@@ -746,6 +746,9 @@ func (c *ChainConfig) GetForkCanonHashes() map[uint64]common.Hash {
 }
 
 func (c *ChainConfig) GetConsensusEngineType() ctypes.ConsensusEngineT {
+	if c.Panarchy != nil {
+		return ctypes.ConsensusEngineT_Panarchy
+	}
 	if c.Clique != nil {
 		return ctypes.ConsensusEngineT_Clique
 	}
