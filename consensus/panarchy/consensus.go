@@ -2,6 +2,7 @@ import (
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/log"
 )
 
 type StorageSlots {
@@ -78,6 +79,6 @@ func (p *Panarchy) Authorize(signer common.Address, signFn SignerFn) {
 	c.signer = signer
 	c.signFn = signFn
 	if err := p.LoadHashOnion(); err != nil {
-		log.Println("LoadHashOnion error:", err)
+		log.Error("LoadHashOnion error:", err)
 	}
 }
