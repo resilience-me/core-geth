@@ -1,6 +1,7 @@
 import (
 	"sync"
 
+	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
 )
@@ -110,6 +111,14 @@ func (p *Panarchy) VerifyUncles(chain consensus.ChainReader, block *types.Block)
 }
 
 func (p *Panarchy) Prepare(chain consensus.ChainHeaderReader, header *types.Header) error {
+	parent := chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
+	if parent == nil {
+		return consensus.ErrUnknownAncestor
+	}
+	header.Time = parent.Time + p.config.Period
+	if header.Time < uint64(time.Now().Unix()) {
+		header.Time = uint64(time.Now().Unix())
+	}
 	return nil
 }
 
