@@ -56,10 +56,28 @@ func New(config *ctypes.PanarchyConfig, db ethdb.Database) *Panarchy {
 	}
 }
 
+func (p *Panarchy) LoadHashOnion() error {
+	filePath := p.config.HashOnionFilePath
+	file, err := os.Open(filePath)
+	if err != nil {
+		return fmt.Errorf("error opening file: %v, hashOnionFilePath: %v", err, configFile)
+	}
+	defer file.Close()
+	
+	err = json.NewDecoder(file).Decode(&p.hashOnion)
+	if err != nil {
+		return fmt.Errorf("error decoding JSON: %v", err)
+	}
+	return nil
+}
+
 func (p *Panarchy) Authorize(signer common.Address, signFn SignerFn) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
 	c.signer = signer
 	c.signFn = signFn
+	if err := p.LoadHashOnion(); err != nil {
+		log.Println("LoadHashOnion error:", err)
+	}
 }
