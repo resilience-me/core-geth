@@ -120,9 +120,16 @@ func New(stack *node.Node, config *ethconfig.Config) (*LightEthereum, error) {
 	log.Info(strings.Repeat("-", 153))
 	log.Info("")
 
+	var panarchyConfig *ctypes.PanarchyConfig
 	var cliqueConfig *ctypes.CliqueConfig
 	var lyra2Config *lyra2.Config
-	if chainConfig.GetConsensusEngineType() == ctypes.ConsensusEngineT_Clique {
+	if chainConfig.GetConsensusEngineType() == ctypes.ConsensusEngineT_Panarchy {
+		panarchyConfig = &ctypes.PanarchyConfig{
+			Period: chainConfig.GetPanarchyPeriod(),
+			Deadline:  chainConfig.GetPanarchyDeadline(),
+			HashOnionFilePath: chainConfig.GetPanarchyHashOnionFilePath(),
+		}
+	} else if chainConfig.GetConsensusEngineType() == ctypes.ConsensusEngineT_Clique {
 		cliqueConfig = &ctypes.CliqueConfig{
 			Period: chainConfig.GetCliquePeriod(),
 			Epoch:  chainConfig.GetCliqueEpoch(),
@@ -150,7 +157,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*LightEthereum, error) {
 		reqDist:         newRequestDistributor(peers, &mclock.System{}),
 		accountManager:  stack.AccountManager(),
 		merger:          merger,
-		engine:          ethconfig.CreateConsensusEngine(stack, &config.Ethash, cliqueConfig, lyra2Config, nil, false, chainDb),
+		engine:          ethconfig.CreateConsensusEngine(stack, &config.Ethash, panarchyConfig, cliqueConfig, lyra2Config, nil, false, chainDb),
 		bloomRequests:   make(chan chan *bloombits.Retrieval),
 		bloomIndexer:    core.NewBloomIndexer(chainDb, vars.BloomBitsBlocksClient, vars.HelperTrieConfirmations),
 		p2pServer:       stack.Server(),
