@@ -271,6 +271,7 @@ type ConsensusEngineT int
 const (
 	ConsensusEngineT_Unknown = iota
 	ConsensusEngineT_Ethash
+	ConsensusEngineT_Panarchy
 	ConsensusEngineT_Clique
 	ConsensusEngineT_Lyra2
 )
@@ -279,6 +280,8 @@ func (c ConsensusEngineT) String() string {
 	switch c {
 	case ConsensusEngineT_Ethash:
 		return "ethash"
+	case ConsensusEngineT_Panarchy:
+		return "panarchy"
 	case ConsensusEngineT_Clique:
 		return "clique"
 	case ConsensusEngineT_Lyra2:
@@ -290,6 +293,10 @@ func (c ConsensusEngineT) String() string {
 
 func (c ConsensusEngineT) IsEthash() bool {
 	return c == ConsensusEngineT_Ethash
+}
+
+func (c ConsensusEngineT) IsPanarchy() bool {
+	return c == ConsensusEngineT_Panarchy
 }
 
 func (c ConsensusEngineT) IsClique() bool {
