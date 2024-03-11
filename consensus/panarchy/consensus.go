@@ -46,8 +46,8 @@ type ValidatorContract struct {
 }
 
 type HashOnion struct {
-	root common.Hash `json:"root"`
-	layers int `json:"layers"`
+	Root common.Hash `json:"root"`
+	Layers int `json:"layers"`
 }
 
 type Panarchy struct {
