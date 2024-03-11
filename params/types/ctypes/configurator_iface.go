@@ -253,6 +253,7 @@ type ConsensusEnginator interface {
 	SetDevMode(devMode bool) error
 
 	EthashConfigurator
+	PanarchyConfigurator
 	CliqueConfigurator
 	Lyra2Configurator
 }
@@ -312,6 +313,15 @@ type EthashConfigurator interface {
 	SetEthashDifficultyBombDelaySchedule(m Uint64BigMapEncodesHex) error
 	GetEthashBlockRewardSchedule() Uint64BigMapEncodesHex
 	SetEthashBlockRewardSchedule(m Uint64BigMapEncodesHex) error
+}
+
+type PanarchyConfigurator interface {
+	GetPanarchyPeriod() uint64
+	SetPanarchyPeriod(n uint64) error
+	GetPanarchyDeadline() uint64
+	SetPanarchyDeadline(n uint64) error
+	GetPanarchyHashOnionFilePath() string
+	SetPanarchyHashOnionFilePath(n string) error
 }
 
 type CliqueConfigurator interface {
