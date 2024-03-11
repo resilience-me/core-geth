@@ -268,6 +268,39 @@ func LoadCliqueConfig(db ethdb.Database, genesis *genesisT.Genesis) (*ctypes.Cli
 	return nil, nil
 }
 
+func LoadPanarchyConfig(db ethdb.Database, genesis *genesisT.Genesis) (*ctypes.PanarchyConfig, error) {
+	stored := rawdb.ReadCanonicalHash(db, 0)
+	if stored != (common.Hash{}) {
+		storedcfg := rawdb.ReadChainConfig(db, stored)
+		if storedcfg != nil {
+			if storedcfg.GetConsensusEngineType() == ctypes.ConsensusEngineT_Panarchy {
+				return &ctypes.PanarchyConfig{
+					Period: storedcfg.GetPanarchyPeriod(),
+					Deadline: storedcfg.GetPanarchyDeadline(),
+					HashOnionFilePath : storedcfg.GetPanarchyHashOnionFilePath(),
+				}, nil
+			}
+		}
+	}
+	if genesis != nil {
+		if genesis.Config == nil {
+			return nil, errGenesisNoConfig
+		}
+		genesisBlock := MustCommitGenesis(rawdb.NewMemoryDatabase(), genesis)
+		if stored != (common.Hash{}) && genesisBlock.Hash() != stored {
+			return nil, &genesisT.GenesisMismatchError{Stored: stored, New: genesisBlock.Hash()}
+		}
+		if genesis.Config.GetConsensusEngineType() == ctypes.ConsensusEngineT_Panarchy {
+			return &ctypes.PanarchyConfig{
+				Period: genesis.Config.GetPanarchyPeriod(),
+				Deadline: genesis.Config.GetPanarchyDeadline(),
+				HashOnionFilePath : genesis.Config.GetPanarchyHashOnionFilePath(),
+			}, nil
+		}
+	}
+	return nil, nil
+}
+
 func configOrDefault(g *genesisT.Genesis, ghash common.Hash) ctypes.ChainConfigurator {
 	switch {
 	case g != nil:
