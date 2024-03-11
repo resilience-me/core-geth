@@ -1,3 +1,5 @@
+package panarchy
+
 import (
 	"sync"
 
