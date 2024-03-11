@@ -25,7 +25,10 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-const errorPrefix = "consensus engine - "
+const (
+	errorPrefix = "consensus engine - "
+	compensateForPossibleReorg = 10
+)
 
 var (
 	errInvalidTimestamp = errors.New("invalid timestamp")
@@ -313,17 +316,25 @@ func (p *Panarchy) finalizeAndAssemble(chain consensus.ChainHeaderReader, header
 	for i := 0; i < p.hashOnion.Layers-1; i++ {
 		preimage = crypto.Keccak256(preimage)
 	}
-	var hash []byte
-	for i := 0; i < 10; i++ {
-		hash = crypto.Keccak256(preimage)
-
-		if currentHashOnion == common.BytesToHash(hash) {
-			break
+	hash := crypto.Keccak256(preimage)
+	
+	if currentHashOnion == common.BytesToHash(hash) {
+		p.hashOnion.Layers--
+		if err := p.WriteHashOnion(); err != nil {
+			return nil, fmt.Errorf("Unable to update hashOnion.json file")
 		}
-		preimage = hash
-	}
-	if currentHashOnion != common.BytesToHash(hash) {
-		return nil, fmt.Errorf("Validator hash onion cannot be verified")
+	} else {
+		for i := 0; i < compensateForPossibleReorg; i++ {
+			hash = crypto.Keccak256(preimage)
+
+			if currentHashOnion == common.BytesToHash(hash) {
+				break
+			}
+			preimage = hash
+		}
+		if currentHashOnion != common.BytesToHash(hash) {
+			return nil, fmt.Errorf("Validator hash onion cannot be verified")
+		}
 	}
 	
 	onion.Hash = common.BytesToHash(preimage)
@@ -337,6 +348,24 @@ func (p *Panarchy) finalizeAndAssemble(chain consensus.ChainHeaderReader, header
 	
 	return nil, nil
 }
+
+func (p *Panarchy) WriteHashOnion() error {
+    filePath := p.config.HashOnionFilePath
+    file, err := os.Create(filePath)
+    if err != nil {
+        return fmt.Errorf("error creating file: %v, hashOnionFilePath: %v", err, filePath)
+    }
+    defer file.Close()
+
+    // Encode the hashOnion data to JSON and write it to the file
+    err = json.NewEncoder(file).Encode(p.hashOnion)
+    if err != nil {
+        return fmt.Errorf("error encoding hashOnion to JSON: %v", err)
+    }
+
+    return nil
+}
+
 
 func (p *Panarchy) updateStorage(key, value []byte) error {
 	if err := p.trie.UpdateStorage(common.Address{}, key, value); err != nil {
