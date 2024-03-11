@@ -1,4 +1,5 @@
 import (
+	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -24,10 +25,11 @@ type HashOnion struct {
 }
 
 type Panarchy struct {
-	config *ctypes.PanarchyConfig
+	config	*ctypes.PanarchyConfig
 	trie Trie
 	contract ValidatorContract
 	hashOnion HashOnion
+	lock sync.RWMutex
 }
 
 func pad(val []byte) []byte {
@@ -52,4 +54,12 @@ func New(config *ctypes.PanarchyConfig, db ethdb.Database) *Panarchy {
 			},
 		}
 	}
+}
+
+func (p *Panarchy) Authorize(signer common.Address, signFn SignerFn) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	c.signer = signer
+	c.signFn = signFn
 }
