@@ -177,9 +177,9 @@ func (p *Panarchy) Prepare(chain consensus.ChainHeaderReader, header *types.Head
 func (p *Panarchy) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, withdrawals []*types.Withdrawal) {
 }
 
-
 func (p *Panarchy) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt, withdrawals []*types.Withdrawal) (*types.Block, error) {
-	return nil, nil
+	
+	return p.finalizeAndAssemble(chain, header, state)
 }
 
 func (p *Panarchy) Seal(chain consensus.ChainHeaderReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error {
@@ -250,4 +250,11 @@ func (p *Panarchy) APIs(chain consensus.ChainHeaderReader) []rpc.API {
 }
 func (p *Panarchy) Close() error {
 	return nil
+}
+
+func (p *Panarchy) finalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) (*types.Block, error) {
+	addrAndSlot := append(pad(p.signer[:]), p.contract.slots.validSince...)
+	key := crypto.Keccak256Hash(addrAndSlot)
+	validSince := state.GetState(p.contract.addr, key)
+	return nil, nil
 }
