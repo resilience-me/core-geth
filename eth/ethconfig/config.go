@@ -235,10 +235,13 @@ type Config struct {
 }
 
 // CreateConsensusEngine creates a consensus engine for the given chain configuration.
-func CreateConsensusEngine(stack *node.Node, ethashConfig *ethash.Config, cliqueConfig *ctypes.CliqueConfig, lyra2Config *lyra2.Config, notify []string, noverify bool, db ethdb.Database) consensus.Engine {
-	// If proof-of-authority is requested, set it up
+func CreateConsensusEngine(stack *node.Node, ethashConfig *ethash.Config, cliqueConfig *ctypes.CliqueConfig, panarchyConfig *ctypes.PanarchyConfig, lyra2Config *lyra2.Config, notify []string, noverify bool, db ethdb.Database) consensus.Engine {
+
 	var engine consensus.Engine
-	if cliqueConfig != nil {
+
+	if panarchyConfig != nil {
+		engine = panarchy.New(panarchyConfig, db)	
+	} else if cliqueConfig != nil {
 		engine = clique.New(cliqueConfig, db)
 	} else if lyra2Config != nil {
 		engine = lyra2.New(lyra2Config, notify, noverify)
