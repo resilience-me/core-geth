@@ -89,8 +89,6 @@ func (p *Panarchy) Authorize(signer common.Address, signFn SignerFn) {
 	}
 }
 
-
-
 func (p *Panarchy) VerifyHeader(chain consensus.ChainHeaderReader, header *types.Header, seal bool) error {
 	return p.verifyHeader(chain, header)
 }
