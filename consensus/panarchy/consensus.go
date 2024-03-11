@@ -330,7 +330,7 @@ func (p *Panarchy) getHashOnionPreimage(onion *Onion) error {
 		preimage = crypto.Keccak256(preimage)
 	}
 	var hash []byte
-	
+
 	for i := 0; i < compensateForPossibleReorg; i++ {
 		hash = crypto.Keccak256(preimage)
 
@@ -339,7 +339,7 @@ func (p *Panarchy) getHashOnionPreimage(onion *Onion) error {
 			if i == 0 {
 				p.hashOnion.Layers--
 				if err := p.WriteHashOnion(); err != nil {
-					return fmt.Errorf("Unable to update hashOnion.json file")
+					return fmt.Errorf("Unable to update %s", p.config.HashOnionFilePath)
 				}
 			}
 			return nil
