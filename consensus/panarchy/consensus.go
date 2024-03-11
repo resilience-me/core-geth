@@ -298,13 +298,11 @@ func (p *Panarchy) finalizeAndAssemble(chain consensus.ChainHeaderReader, header
 	if err != nil {
 		return nil, err
 	}
-
-	currentHashOnion := onion.Hash
 	 
 	if header.Number.Cmp(validSince) >= 0 {
 		
 		if onion.ValidSince == nil || onion.ValidSince.Cmp(validSince) < 0 {
-			currentHashOnion = p.getHashOnionFromContract(state)
+			onion.Hash = p.getHashOnionFromContract(state)
 			onion.ValidSince = validSince
 		}
 	}
@@ -312,41 +310,43 @@ func (p *Panarchy) finalizeAndAssemble(chain consensus.ChainHeaderReader, header
 	if p.hashOnion.Layers <= 0 {
 		return nil, fmt.Errorf("Validator hash onion is empty")
 	}
-	preimage := p.hashOnion.Root.Bytes()
-	for i := 0; i < p.hashOnion.Layers-1; i++ {
-		preimage = crypto.Keccak256(preimage)
-	}
-	hash := crypto.Keccak256(preimage)
 	
-	if currentHashOnion == common.BytesToHash(hash) {
-		p.hashOnion.Layers--
-		if err := p.WriteHashOnion(); err != nil {
-			return nil, fmt.Errorf("Unable to update hashOnion.json file")
-		}
-	} else {
-		for i := 0; i < compensateForPossibleReorg; i++ {
-			hash = crypto.Keccak256(preimage)
-
-			if currentHashOnion == common.BytesToHash(hash) {
-				break
-			}
-			preimage = hash
-		}
-		if currentHashOnion != common.BytesToHash(hash) {
-			return nil, fmt.Errorf("Validator hash onion cannot be verified")
-		}
-	}
-	
-	onion.Hash = common.BytesToHash(preimage)
+	p.getHashOnionPreimage(&onion)
 	
 	if err := p.updateHashOnion(p.signer.Bytes(), onion); err != nil {
 		return nil, err
 	}
 
 	header.Extra = make([]byte, 129)
-	copy(header.Extra[32:64], preimage)
-	
+	copy(header.Extra[32:64], onion.Hash.Bytes())
+
 	return nil, nil
+}
+
+func (p *Panarchy) getHashOnionPreimage(onion *Onion) error {
+
+	preimage := p.hashOnion.Root.Bytes()
+	for i := 0; i < p.hashOnion.Layers-1; i++ {
+		preimage = crypto.Keccak256(preimage)
+	}
+	var hash []byte
+	
+	for i := 0; i < compensateForPossibleReorg; i++ {
+		hash = crypto.Keccak256(preimage)
+
+		if onion.Hash == common.BytesToHash(hash) {
+			onion.Hash = common.BytesToHash(preimage)
+			if i == 0 {
+				p.hashOnion.Layers--
+				if err := p.WriteHashOnion(); err != nil {
+					return fmt.Errorf("Unable to update hashOnion.json file")
+				}
+			}
+			return nil
+		}
+		preimage = hash
+	}
+	return fmt.Errorf("Validator hash onion cannot be verified")
 }
 
 func (p *Panarchy) WriteHashOnion() error {
@@ -357,7 +357,6 @@ func (p *Panarchy) WriteHashOnion() error {
     }
     defer file.Close()
 
-    // Encode the hashOnion data to JSON and write it to the file
     err = json.NewEncoder(file).Encode(p.hashOnion)
     if err != nil {
         return fmt.Errorf("error encoding hashOnion to JSON: %v", err)
