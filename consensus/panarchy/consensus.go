@@ -61,7 +61,7 @@ func New(config *ctypes.PanarchyConfig, db ethdb.Database) *Panarchy {
 			schedule: Schedule {
 				period: weeksToSeconds(4),
 			},
-		}
+		},
 	}
 }
 
