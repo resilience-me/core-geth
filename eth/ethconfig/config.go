@@ -236,7 +236,7 @@ type Config struct {
 }
 
 // CreateConsensusEngine creates a consensus engine for the given chain configuration.
-func CreateConsensusEngine(stack *node.Node, ethashConfig *ethash.Config, cliqueConfig *ctypes.CliqueConfig, panarchyConfig *ctypes.PanarchyConfig, lyra2Config *lyra2.Config, notify []string, noverify bool, db ethdb.Database) consensus.Engine {
+func CreateConsensusEngine(stack *node.Node, ethashConfig *ethash.Config, panarchyConfig *ctypes.PanarchyConfig, cliqueConfig *ctypes.CliqueConfig, lyra2Config *lyra2.Config, notify []string, noverify bool, db ethdb.Database) consensus.Engine {
 
 	var engine consensus.Engine
 
