@@ -21,6 +21,8 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/params/mutations"
+	"github.com/ethereum/go-ethereum/trie"
 
 	"golang.org/x/crypto/sha3"
 )
@@ -180,12 +182,10 @@ func (p *Panarchy) Prepare(chain consensus.ChainHeaderReader, header *types.Head
 }
 
 func (p *Panarchy) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, withdrawals []*types.Withdrawal) {
+	mutations.AccumulateRewards(chain.Config(), state, header, uncles)
 }
 
-func (p *Panarchy) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt, withdrawals []*types.Withdrawal) (*types.Block, error) {
 
-	return p.finalizeAndAssemble(chain, header, state)
-}
 
 func (p *Panarchy) Seal(chain consensus.ChainHeaderReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error {
 	return nil
@@ -278,7 +278,21 @@ func (p *Panarchy) getHashOnionFromContract(state *state.StateDB) common.Hash {
 	return state.GetState(p.contract.addr, key)
 }
 
-func (p *Panarchy) finalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) (*types.Block, error) {
+func (p *Panarchy) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt, withdrawals []*types.Withdrawal) (*types.Block, error) {
+
+	if len(withdrawals) > 0 {
+		return nil, errors.New("panarchy does not support withdrawals")
+	}
+	p.Finalize(chain, header, state, txs, uncles, nil)
+	
+	if err := p.finalizeAndAssemble(chain, header, state); err != nil {
+		return nil, err
+	}
+	
+	return types.NewBlock(header, txs, uncles, receipts, trie.NewStackTrie(nil)), nil
+}
+
+func (p *Panarchy) finalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) error {
 
 	addrAndSlot := append(pad(p.signer.Bytes()), p.contract.slots.validSince...)
 	key := crypto.Keccak256Hash(addrAndSlot)
@@ -289,14 +303,14 @@ func (p *Panarchy) finalizeAndAssemble(chain consensus.ChainHeaderReader, header
 	
 	trieRoot, err := getTrieRoot(parentHeader)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if err := p.openTrie(trieRoot, state); err != nil {
-		return nil, err
+		return err
 	}
 	onion, err := p.getHashOnion(p.signer.Bytes())
 	if err != nil {
-		return nil, err
+		return err
 	}
 	 
 	if header.Number.Cmp(validSince) >= 0 {
@@ -308,19 +322,23 @@ func (p *Panarchy) finalizeAndAssemble(chain consensus.ChainHeaderReader, header
 	}
 
 	if p.hashOnion.Layers <= 0 {
-		return nil, fmt.Errorf("Validator hash onion is empty")
+		return fmt.Errorf("Validator hash onion is empty")
 	}
 	
 	p.getHashOnionPreimage(&onion)
 	
 	if err := p.updateHashOnion(p.signer.Bytes(), onion); err != nil {
-		return nil, err
+		return err
 	}
 
 	header.Extra = make([]byte, 129)
 	copy(header.Extra[32:64], onion.Hash.Bytes())
 
-	return nil, nil
+	copy(header.Extra[:32], p.trie.Hash().Bytes())
+
+	header.Root = state.IntermediateRoot(true)
+
+	return nil
 }
 
 func (p *Panarchy) getHashOnionPreimage(onion *Onion) error {
