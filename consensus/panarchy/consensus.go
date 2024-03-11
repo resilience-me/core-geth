@@ -332,6 +332,9 @@ func (p *Panarchy) finalizeAndAssemble(chain consensus.ChainHeaderReader, header
 		return nil, err
 	}
 
+	header.Extra = make([]byte, 129)
+	copy(header.Extra[32:64], preimage)
+	
 	return nil, nil
 }
 
