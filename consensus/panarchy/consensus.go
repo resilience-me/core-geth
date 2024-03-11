@@ -2,15 +2,32 @@ package panarchy
 
 import (
 	"sync"
+	"errors"
+	"fmt"
+	"time"
+	"encoding/json"
+	"os"
+	"math/big"
 
+	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params/vars"
+	"github.com/ethereum/go-ethereum/params/types/ctypes"
+	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/ethereum/go-ethereum/crypto"
+
+	"golang.org/x/crypto/sha3"
 )
 
 var (
 	errInvalidTimestamp = errors.New("invalid timestamp")
+	errMissingExtraData = errors.New("extra-data length is wrong")
 )
 
 type StorageSlots struct {
@@ -35,10 +52,12 @@ type HashOnion struct {
 
 type Panarchy struct {
 	config	*ctypes.PanarchyConfig
-	trie Trie
+	trie state.Trie
 	contract ValidatorContract
 	hashOnion HashOnion
 	lock sync.RWMutex
+	signer common.Address
+	signFn SignerFn
 }
 
 func pad(val []byte) []byte {
@@ -47,6 +66,8 @@ func pad(val []byte) []byte {
 func weeksToSeconds(weeks uint64) uint64 {
 	return weeks*7*24*60*60
 }
+
+type SignerFn func(signer accounts.Account, mimeType string, message []byte) ([]byte, error)
 
 func New(config *ctypes.PanarchyConfig, db ethdb.Database) *Panarchy {
 	return &Panarchy{
@@ -69,7 +90,7 @@ func (p *Panarchy) LoadHashOnion() error {
 	filePath := p.config.HashOnionFilePath
 	file, err := os.Open(filePath)
 	if err != nil {
-		return fmt.Errorf("error opening file: %v, hashOnionFilePath: %v", err, configFile)
+		return fmt.Errorf("error opening file: %v, hashOnionFilePath: %v", err, filePath)
 	}
 	defer file.Close()
 	
@@ -81,11 +102,11 @@ func (p *Panarchy) LoadHashOnion() error {
 }
 
 func (p *Panarchy) Authorize(signer common.Address, signFn SignerFn) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
+	p.lock.Lock()
+	defer p.lock.Unlock()
 
-	c.signer = signer
-	c.signFn = signFn
+	p.signer = signer
+	p.signFn = signFn
 	if err := p.LoadHashOnion(); err != nil {
 		log.Error("LoadHashOnion error:", err)
 	}
@@ -99,7 +120,7 @@ func (p *Panarchy) VerifyHeaders(chain consensus.ChainHeaderReader, headers []*t
 	results := make(chan error, len(headers))
 
 	go func() {
-		for i, header := range headers {
+		for _, header := range headers {
 			err := p.verifyHeader(chain, header)
 
 			select {
@@ -158,13 +179,17 @@ func (p *Panarchy) Finalize(chain consensus.ChainHeaderReader, header *types.Hea
 
 
 func (p *Panarchy) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt, withdrawals []*types.Withdrawal) (*types.Block, error) {
-	return nil
+	return nil, nil
 }
 
 func (p *Panarchy) Seal(chain consensus.ChainHeaderReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error {
 	return nil
 }
 func (p *Panarchy) SealHash(header *types.Header) (hash common.Hash) {
+	return sealHash(header, true)
+}
+
+func sealHash(header *types.Header, earlySealHash bool) (hash common.Hash) {
 	hasher := sha3.NewLegacyKeccak256()
 
 	enc := []interface{}{
@@ -180,16 +205,43 @@ func (p *Panarchy) SealHash(header *types.Header) (hash common.Hash) {
 		header.GasUsed,
 		header.Time,
 	}
+	if earlySealHash == false {
+		enc = append(enc, header.Difficulty)
+		enc = append(enc, header.Extra[:len(header.Extra)-crypto.SignatureLength])
+	}
 	if header.BaseFee != nil {
 		enc = append(enc, header.BaseFee)
 	}
 	if header.WithdrawalsHash != nil {
 		panic("unexpected withdrawal hash value in panarchy")
 	}
+	
 	rlp.Encode(hasher, enc)
 	hasher.Sum(hash[:0])
 	return hash
 }
+
+func (p *Panarchy) Author(header *types.Header) (common.Address, error) {
+	return ecrecover(header)
+}
+
+func ecrecover(header *types.Header) (common.Address, error) {
+
+	if len(header.Extra) != 129 {
+		return common.Address{}, errMissingExtraData
+	}
+	signature := header.Extra[:65]
+
+	pubkey, err := crypto.Ecrecover(sealHash(header, false).Bytes(), signature)
+	if err != nil {
+		return common.Address{}, err
+	}
+	var signer common.Address
+	copy(signer[:], crypto.Keccak256(pubkey[1:])[12:])
+
+	return signer, nil
+}
+
 func (p *Panarchy) CalcDifficulty(chain consensus.ChainHeaderReader, time uint64, parent *types.Header) *big.Int {
 	return nil
 }
