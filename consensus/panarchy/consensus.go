@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	errOlderBlockTime    = errors.New("timestamp older than parent")
+	errInvalidTimestamp = errors.New("invalid timestamp")
 }
 
 type StorageSlots {
