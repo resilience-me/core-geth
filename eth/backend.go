@@ -148,16 +148,17 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	if config.Genesis != nil && config.Genesis.Config != nil {
 		ethashConfig.ECIP1099Block = config.Genesis.GetEthashECIP1099Transition()
 	}
-
+	
+	panarchyConfig, err := core.LoadPanarchyConfig(chainDb, config.Genesis)
+	if err != nil {
+		return nil, err
+	}
+	
 	cliqueConfig, err := core.LoadCliqueConfig(chainDb, config.Genesis)
 	if err != nil {
 		return nil, err
 	}
 
-	panarchyConfig, err := core.LoadPanarchyConfig(chainDb, config.Genesis)
-	if err != nil {
-		return nil, err
-	}
 	var lyra2Config *lyra2.Config
 	if config.Genesis != nil && config.Genesis.Config != nil {
 		if config.Genesis.Config.GetConsensusEngineType() == ctypes.ConsensusEngineT_Lyra2 {
@@ -165,7 +166,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		}
 	}
 
-	engine := ethconfig.CreateConsensusEngine(stack, &ethashConfig, cliqueConfig, panarchyConfig, lyra2Config, config.Miner.Notify, config.Miner.Noverify, chainDb)
+	engine := ethconfig.CreateConsensusEngine(stack, &ethashConfig, panarchyConfig, cliqueConfig, lyra2Config, config.Miner.Notify, config.Miner.Noverify, chainDb)
 
 	eth := &Ethereum{
 		config:            config,
