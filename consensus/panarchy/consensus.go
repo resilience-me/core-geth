@@ -1,6 +1,8 @@
 package panarchy
 
 import (
+	"bytes"
+	"io"
 	"sync"
 	"errors"
 	"fmt"
@@ -8,6 +10,7 @@ import (
 	"encoding/json"
 	"os"
 	"math/big"
+	"encoding/binary"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/consensus"
@@ -65,6 +68,7 @@ type Panarchy struct {
 	lock sync.RWMutex
 	signer common.Address
 	signFn SignerFn
+	state *state.StateDB
 }
 
 func pad(val []byte) []byte {
@@ -87,6 +91,7 @@ func New(config *ctypes.PanarchyConfig, db ethdb.Database) *Panarchy {
 			},
 			addr: common.HexToAddress("0x0000000000000000000000000000000000000020"),
 			schedule: Schedule {
+				genesis: 1709960400,
 				period: weeksToSeconds(4),
 			},
 		},
@@ -185,18 +190,93 @@ func (p *Panarchy) Finalize(chain consensus.ChainHeaderReader, header *types.Hea
 	mutations.AccumulateRewards(chain.Config(), state, header, uncles)
 }
 
-
-
 func (p *Panarchy) Seal(chain consensus.ChainHeaderReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error {
+	
+	go func() {
+		var validator common.Address
+		header := block.Header()
+		parentHeader := chain.GetHeaderByHash(header.ParentHash)
+		delay := time.Unix(int64(header.Time), 0).Sub(time.Now())
+		var i uint64
+		loop:
+		for {
+			select {
+			case <-stop:
+				return
+			case <-time.After(delay):
+				validator = p.getValidator(parentHeader, i);
+				if validator == p.signer {
+					break loop
+				}
+				i++
+				delay += time.Duration(p.config.Deadline) * time.Second
+			}
+		}
+		header.Difficulty = new(big.Int).Sub(big.NewInt(1), big.NewInt(int64(i)))
+		sighash, _ := p.signFn(accounts.Account{Address: p.signer}, "", PanarchyRLP(header))
+		copy(header.Extra[64:], sighash)
+		select {
+			case results <- block.WithSeal(header):
+			default:
+				log.Warn("Sealing result is not read by miner", "sealhash", SealHash(header, false))
+		}
+	}()
+
 	return nil
 }
-func (p *Panarchy) SealHash(header *types.Header) (hash common.Hash) {
-	return sealHash(header, true)
+
+func uint64ToBytes(value uint64) []byte {
+	buf := make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, value)
+	return buf
 }
 
-func sealHash(header *types.Header, earlySealHash bool) (hash common.Hash) {
-	hasher := sha3.NewLegacyKeccak256()
+func (p *Panarchy) schedule(header *types.Header) []byte {
+	t := ((header.Time - p.contract.schedule.genesis) / p.contract.schedule.period)
+	return pad(uint64ToBytes(t))
+}
 
+func (p *Panarchy) electionLength(index []byte) []byte {
+	slot := p.contract.slots.election
+	key := crypto.Keccak256Hash(append(index, slot...))
+	return p.state.GetState(p.contract.addr, key).Bytes()
+}
+
+func (p *Panarchy) getValidator(header *types.Header, skipped uint64) common.Address {
+	index := p.schedule(header)
+	
+	trieRoot, err := getTrieRoot(header)
+	if err != nil {
+		log.Error("Error loading trie root in getValidator:", err)
+	}
+	random := new(big.Int).SetBytes(trieRoot.Bytes())
+	random.Add(random, new(big.Int).SetUint64(skipped))
+	modulus := new(big.Int).SetBytes(p.electionLength(index))
+	random.Mod(random, modulus)
+	
+	slot := p.contract.slots.election
+	key := new(big.Int).SetBytes(crypto.Keccak256(crypto.Keccak256(append(index, slot...))))
+	key.Add(key, random)
+	return common.BytesToAddress(p.state.GetState(p.contract.addr, common.BytesToHash(key.Bytes())).Bytes())
+}
+
+func (p *Panarchy) SealHash(header *types.Header) (hash common.Hash) {
+	return SealHash(header, false)
+}
+func SealHash(header *types.Header, finalSealHash bool) (hash common.Hash) {
+	hasher := sha3.NewLegacyKeccak256()
+	encodeSigHeader(hasher, header, finalSealHash)
+	hasher.(crypto.KeccakState).Read(hash[:])
+	return hash
+}
+
+func PanarchyRLP(header *types.Header) []byte {
+	b := new(bytes.Buffer)
+	encodeSigHeader(b, header, true)
+	return b.Bytes()
+}
+
+func encodeSigHeader(w io.Writer, header *types.Header, finalSealHash bool) {
 	enc := []interface{}{
 		header.ParentHash,
 		header.UncleHash,
@@ -209,8 +289,10 @@ func sealHash(header *types.Header, earlySealHash bool) (hash common.Hash) {
 		header.GasLimit,
 		header.GasUsed,
 		header.Time,
+		header.MixDigest,
+		header.Nonce,
 	}
-	if earlySealHash == false {
+	if finalSealHash == true {
 		enc = append(enc, header.Difficulty)
 		enc = append(enc, header.Extra[:len(header.Extra)-crypto.SignatureLength])
 	}
@@ -220,10 +302,9 @@ func sealHash(header *types.Header, earlySealHash bool) (hash common.Hash) {
 	if header.WithdrawalsHash != nil {
 		panic("unexpected withdrawal hash value in panarchy")
 	}
-	
-	rlp.Encode(hasher, enc)
-	hasher.Sum(hash[:0])
-	return hash
+	if err := rlp.Encode(w, enc); err != nil {
+		panic("can't encode: " + err.Error())
+	}
 }
 
 func (p *Panarchy) Author(header *types.Header) (common.Address, error) {
@@ -247,7 +328,7 @@ func ecrecover(header *types.Header) (common.Address, error) {
 	}
 	signature := header.Extra[:65]
 
-	pubkey, err := crypto.Ecrecover(sealHash(header, false).Bytes(), signature)
+	pubkey, err := crypto.Ecrecover(SealHash(header, false).Bytes(), signature)
 	if err != nil {
 		return common.Address{}, err
 	}
@@ -285,18 +366,20 @@ func (p *Panarchy) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header
 	}
 	p.Finalize(chain, header, state, txs, uncles, nil)
 	
-	if err := p.finalizeAndAssemble(chain, header, state); err != nil {
+	p.state = state
+	
+	if err := p.finalizeAndAssemble(chain, header); err != nil {
 		return nil, err
 	}
 	
 	return types.NewBlock(header, txs, uncles, receipts, trie.NewStackTrie(nil)), nil
 }
 
-func (p *Panarchy) finalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) error {
+func (p *Panarchy) finalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header) error {
 
 	addrAndSlot := append(pad(p.signer.Bytes()), p.contract.slots.validSince...)
 	key := crypto.Keccak256Hash(addrAndSlot)
-	data := state.GetState(p.contract.addr, key)
+	data := p.state.GetState(p.contract.addr, key)
 	validSince := new(big.Int).SetBytes(data.Bytes())
 
 	parentHeader := chain.GetHeaderByHash(header.ParentHash)
@@ -305,7 +388,7 @@ func (p *Panarchy) finalizeAndAssemble(chain consensus.ChainHeaderReader, header
 	if err != nil {
 		return err
 	}
-	if err := p.openTrie(trieRoot, state); err != nil {
+	if err := p.openTrie(trieRoot, p.state); err != nil {
 		return err
 	}
 	onion, err := p.getHashOnion(p.signer.Bytes())
@@ -316,7 +399,7 @@ func (p *Panarchy) finalizeAndAssemble(chain consensus.ChainHeaderReader, header
 	if header.Number.Cmp(validSince) >= 0 {
 		
 		if onion.ValidSince == nil || onion.ValidSince.Cmp(validSince) < 0 {
-			onion.Hash = p.getHashOnionFromContract(state)
+			onion.Hash = p.getHashOnionFromContract(p.state)
 			onion.ValidSince = validSince
 		}
 	}
@@ -336,7 +419,7 @@ func (p *Panarchy) finalizeAndAssemble(chain consensus.ChainHeaderReader, header
 
 	copy(header.Extra[:32], p.trie.Hash().Bytes())
 
-	header.Root = state.IntermediateRoot(true)
+	header.Root = p.state.IntermediateRoot(true)
 
 	return nil
 }
@@ -420,7 +503,7 @@ func getTrieRoot(header *types.Header) (common.Hash, error) {
 	if err := extraDataLength(header); err != nil {
 		return common.Hash{}, err
 	}
-	return common.BytesToHash(header.Extra[97: 129]), nil
+	return common.BytesToHash(header.Extra[: 32]), nil
 }
 
 func (p *Panarchy) getStorage(key []byte) ([]byte, error) {
