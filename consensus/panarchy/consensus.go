@@ -26,6 +26,8 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params/mutations"
 	"github.com/ethereum/go-ethereum/trie"
+	"github.com/ethereum/go-ethereum/trie/trienode"
+	"github.com/ethereum/go-ethereum/trie/triestate"
 
 	"golang.org/x/crypto/sha3"
 )
@@ -175,6 +177,7 @@ func (p *Panarchy) VerifyUncles(chain consensus.ChainReader, block *types.Block)
 }
 
 func (p *Panarchy) Prepare(chain consensus.ChainHeaderReader, header *types.Header) error {
+
 	parent := chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
 	if parent == nil {
 		return consensus.ErrUnknownAncestor
@@ -215,10 +218,11 @@ func (p *Panarchy) Seal(chain consensus.ChainHeaderReader, block *types.Block, r
 		header.Difficulty = new(big.Int).Sub(big.NewInt(1), big.NewInt(int64(i)))
 		sighash, err := p.signFn(accounts.Account{Address: p.signer}, "", PanarchyRLP(header))
 		if err != nil {
-			log.Error(err)
+			log.Error("Failed to sign the header", "account", p.signer.Hex(), "error", err)
 		}
 
 		copy(header.Extra[64:], sighash)
+
 		select {
 			case results <- block.WithSeal(header):
 			default:
@@ -392,9 +396,12 @@ func (p *Panarchy) finalizeAndAssemble(chain consensus.ChainHeaderReader, header
 	if err != nil {
 		return err
 	}
+
 	if err := p.openTrie(trieRoot, p.state); err != nil {
+		fmt.Printf("Error: %s\n", err)
 		return err
 	}
+
 	onion, err := p.getHashOnion(p.signer.Bytes())
 	if err != nil {
 		return err
@@ -421,7 +428,15 @@ func (p *Panarchy) finalizeAndAssemble(chain consensus.ChainHeaderReader, header
 	header.Extra = make([]byte, 129)
 	copy(header.Extra[32:64], onion.Hash.Bytes())
 
-	copy(header.Extra[:32], p.trie.Hash().Bytes())
+	newTrieRoot, nodes, err := p.trie.Commit(false)
+
+	if err != nil {
+		return fmt.Errorf("Commit trie failed", err)
+	}
+
+	p.state.Database().TrieDB().Update(newTrieRoot, trieRoot, header.Number.Uint64(), trienode.NewWithNodeSet(nodes), &triestate.Set{})
+
+	copy(header.Extra[:32], newTrieRoot.Bytes())
 
 	header.Root = p.state.IntermediateRoot(true)
 
