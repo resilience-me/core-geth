@@ -213,7 +213,11 @@ func (p *Panarchy) Seal(chain consensus.ChainHeaderReader, block *types.Block, r
 			}
 		}
 		header.Difficulty = new(big.Int).Sub(big.NewInt(1), big.NewInt(int64(i)))
-		sighash, _ := p.signFn(accounts.Account{Address: p.signer}, "", PanarchyRLP(header))
+		sighash, err := p.signFn(accounts.Account{Address: p.signer}, "", PanarchyRLP(header))
+		if err != nil {
+			log.Error(err)
+		}
+
 		copy(header.Extra[64:], sighash)
 		select {
 			case results <- block.WithSeal(header):
@@ -294,7 +298,7 @@ func encodeSigHeader(w io.Writer, header *types.Header, finalSealHash bool) {
 	}
 	if finalSealHash == true {
 		enc = append(enc, header.Difficulty)
-		enc = append(enc, header.Extra[:len(header.Extra)-crypto.SignatureLength])
+		enc = append(enc, header.Extra)
 	}
 	if header.BaseFee != nil {
 		enc = append(enc, header.BaseFee)
