@@ -44,7 +44,7 @@ web3._extend({
 			name: 'setHashonionFilepath',
 			call: 'validator_hashonion',
 			params: 1,
-			inputFormatter: [web3._extend.formatters.formatInputInt],
+			inputFormatter: [null],
 			outputFormatter: web3._extend.formatters.formatOutputBool
 		}),
 		new web3._extend.Method({
