@@ -76,7 +76,7 @@ func writeHashToContract (preimage []byte, validator common.Address, state *stat
 	self.current.state.SetState(addressOne, hashOnion, common.BytesToHash(preimage))
 }
 
-func hashOnionFromStorageOrNew(validator common.Address, blockNumber *big.Int, state *state.StateDB) common.Hash {
+func hashonionFromStorageOrNew(validator common.Address, blockNumber *big.Int, state *state.StateDB) common.Hash {
 	validatorPadded := common.LeftPadBytes(validator.Bytes(), 32)
 	pending := crypto.Keccak256(append(validatorPadded, slotTwo...))
 	validSinceField := new(big.Int).Add(new(big.Int).SetBytes(pending), common.Big1)
