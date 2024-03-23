@@ -43,6 +43,7 @@ var (
 		"miner_start":        (*minerApi).StartMiner,
 		"miner_stopAutoDAG":  (*minerApi).StopAutoDAG,
 		"miner_stop":         (*minerApi).StopMiner,
+		"miner_hashonion":    (*minerApi).SetHashonionFilepath,
 	}
 )
 
@@ -150,6 +151,15 @@ func (self *minerApi) SetEtherbase(req *shared.Request) (interface{}, error) {
 		return false, err
 	}
 	self.ethereum.SetEtherbase(args.Etherbase)
+	return nil, nil
+}
+
+func (self *minerApi) SetHashonionFilepath(req *shared.Request) (interface{}, error) {
+	args := new(SetHashonionFilepathArgs)
+	if err := self.codec.Decode(req.Params, &args); err != nil {
+		return false, err
+	}
+	self.ethereum.Miner().SetHashonionFilepath(args.Filepath)
 	return nil, nil
 }
 
