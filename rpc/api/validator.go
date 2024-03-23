@@ -89,11 +89,6 @@ func (self *validatorApi) ApiVersion() string {
 }
 
 func (self *validatorApi) StartValidator(req *shared.Request) (interface{}, error) {
-	args := new(StartValidatorArgs)
-	if err := self.codec.Decode(req.Params, &args); err != nil {
-		return nil, err
-	}
-
 	err := self.ethereum.StartMining()
 	if err == nil {
 		return true, nil
