@@ -394,21 +394,13 @@ func (sm *BlockProcessor) GetLogs(block *types.Block) (logs state.Logs, err erro
 
 // See YP section 4.3.4. "Block Header Validity"
 // Validates a block. Returns an error if the block is invalid.
-func ValidateHeader(pow pow.PoW, block *types.Header, parent *types.Block, checkPow bool) error {
-	if big.NewInt(int64(len(block.Extra))).Cmp(params.MaximumExtraDataSize) == 1 {
-		return fmt.Errorf("Block extra data too long (%d)", len(block.Extra))
-	}
+func ValidateHeader(block *types.Header, parent *types.Block) error {
 
 	if block.Time > uint64(time.Now().Unix()) {
 		return BlockFutureErr
 	}
 	if block.Time <= parent.Time() {
 		return BlockEqualTSErr
-	}
-
-	expd := CalcDifficulty(block.Time, parent.Time(), parent.Difficulty())
-	if expd.Cmp(block.Difficulty) != 0 {
-		return fmt.Errorf("Difficulty check failed for block %v, %v", block.Difficulty, expd)
 	}
 
 	var a, b *big.Int
@@ -425,13 +417,6 @@ func ValidateHeader(pow pow.PoW, block *types.Header, parent *types.Block, check
 	num.Sub(block.Number, num)
 	if num.Cmp(big.NewInt(1)) != 0 {
 		return BlockNumberErr
-	}
-
-	if checkPow {
-		// Verify the nonce of the block. Return an error if it's not valid
-		if !pow.Verify(types.NewBlockWithHeader(block)) {
-			return ValidationError("Block's nonce is invalid (= %x)", block.Nonce)
-		}
 	}
 
 	return nil
