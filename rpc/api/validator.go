@@ -81,21 +81,20 @@ func (self *validatorApi) Methods() []string {
 }
 
 func (self *validatorApi) Name() string {
-	return shared.MinerApiName
+	return shared.ValidatorApiName
 }
 
 func (self *validatorApi) ApiVersion() string {
-	return MinerApiVersion
+	return ValidatorApiVersion
 }
 
 func (self *validatorApi) StartValidator(req *shared.Request) (interface{}, error) {
-	args := new(StartMinerArgs)
+	args := new(StartValidatorArgs)
 	if err := self.codec.Decode(req.Params, &args); err != nil {
 		return nil, err
 	}
 
-	self.ethereum.StartAutoDAG()
-	err := self.ethereum.StartMining(args.Threads)
+	err := self.ethereum.StartMining()
 	if err == nil {
 		return true, nil
 	}
