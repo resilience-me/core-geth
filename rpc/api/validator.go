@@ -19,7 +19,6 @@ package api
 import (
 	"fmt"
 
-	"github.com/ethereum/ethash"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/params"
@@ -28,22 +27,17 @@ import (
 )
 
 const (
-	MinerApiVersion = "1.0"
+	ValidatorApiVersion = "1.0"
 )
 
 var (
 	// mapping between methods and handlers
 	ValidatorMapping = map[string]minerhandler{
-		"miner_hashrate":     (*minerApi).Hashrate,
-		"miner_makeDAG":      (*minerApi).MakeDAG,
-		"miner_setExtra":     (*minerApi).SetExtra,
-		"miner_setGasPrice":  (*minerApi).SetGasPrice,
-		"miner_setEtherbase": (*minerApi).SetEtherbase,
-		"miner_startAutoDAG": (*minerApi).StartAutoDAG,
-		"miner_start":        (*minerApi).StartValidator,
-		"miner_stopAutoDAG":  (*minerApi).StopAutoDAG,
-		"miner_stop":         (*minerApi).StopValidator,
-		"miner_hashonion":    (*minerApi).SetHashonionFilepath,
+		"validator_setGasPrice":  (*validatorApi).SetGasPrice,
+		"validator_setEtherbase": (*validatorApi).SetEtherbase,
+		"validator_hashonion":    (*validatorApi).SetHashonionFilepath,
+		"validator_start":        (*validatorApi).StartValidator,
+		"validator_stop":         (*validatorApi).StopValidator,
 	}
 )
 
@@ -140,31 +134,4 @@ func (self *validatorApi) SetHashonionFilepath(req *shared.Request) (interface{}
 	}
 	self.ethereum.Miner().SetHashonionFilepath(args.Filepath)
 	return nil, nil
-}
-
-func (self *validatorApi) StartAutoDAG(req *shared.Request) (interface{}, error) {
-	self.ethereum.StartAutoDAG()
-	return true, nil
-}
-
-func (self *validatorApi) StopAutoDAG(req *shared.Request) (interface{}, error) {
-	self.ethereum.StopAutoDAG()
-	return true, nil
-}
-
-func (self *validatorApi) MakeDAG(req *shared.Request) (interface{}, error) {
-	args := new(MakeDAGArgs)
-	if err := self.codec.Decode(req.Params, &args); err != nil {
-		return nil, err
-	}
-
-	if args.BlockNumber < 0 {
-		return false, shared.NewValidationError("BlockNumber", "BlockNumber must be positive")
-	}
-
-	err := ethash.MakeDAG(uint64(args.BlockNumber), "")
-	if err == nil {
-		return true, nil
-	}
-	return false, err
 }
