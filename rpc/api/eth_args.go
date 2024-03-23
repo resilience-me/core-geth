@@ -836,44 +836,6 @@ func NewHashesRes(hs []common.Hash) []string {
 	return hashes
 }
 
-type SubmitWorkArgs struct {
-	Nonce  uint64
-	Header string
-	Digest string
-}
-
-func (args *SubmitWorkArgs) UnmarshalJSON(b []byte) (err error) {
-	var obj []interface{}
-	if err = json.Unmarshal(b, &obj); err != nil {
-		return shared.NewDecodeParamError(err.Error())
-	}
-
-	if len(obj) < 3 {
-		return shared.NewInsufficientParamsError(len(obj), 3)
-	}
-
-	var objstr string
-	var ok bool
-	if objstr, ok = obj[0].(string); !ok {
-		return shared.NewInvalidTypeError("nonce", "not a string")
-	}
-
-	args.Nonce = common.String2Big(objstr).Uint64()
-	if objstr, ok = obj[1].(string); !ok {
-		return shared.NewInvalidTypeError("header", "not a string")
-	}
-
-	args.Header = objstr
-
-	if objstr, ok = obj[2].(string); !ok {
-		return shared.NewInvalidTypeError("digest", "not a string")
-	}
-
-	args.Digest = objstr
-
-	return nil
-}
-
 type tx struct {
 	tx *types.Transaction
 
