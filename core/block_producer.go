@@ -88,7 +88,7 @@ type Result struct {
 }
 
 // worker is the main object which takes care of applying messages to the new state
-type worker struct {
+type blockProducer struct {
 	mu sync.Mutex
 
 	recv   chan *Result
@@ -122,8 +122,8 @@ type worker struct {
 	fullValidation bool
 }
 
-func newWorker(coinbase common.Address, eth Backend, engine *Panarchy) *worker {
-	worker := &worker{
+func newBlockProducer(coinbase common.Address, eth Backend, engine *Panarchy) *worker {
+	blockProducer := &blockProducer{
 		eth:            eth,
 		mux:            eth.EventMux(),
 		extraDb:        eth.ExtraDb(),
@@ -138,27 +138,27 @@ func newWorker(coinbase common.Address, eth Backend, engine *Panarchy) *worker {
 		fullValidation: false,
 		engine: engine,
 	}
-	go worker.update()
-	go worker.wait()
+	go blockProducer.update()
+	go blockProducer.wait()
 
-	worker.startProduceBlock()
+	blockProducer.startProduceBlock()
 
-	return worker
+	return blockProducer
 }
 
-func (self *worker) setEtherbase(addr common.Address) {
+func (self *blockProducer) setEtherbase(addr common.Address) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 	self.coinbase = addr
 }
 
-func (self *worker) pendingState() *state.StateDB {
+func (self *blockProducer) pendingState() *state.StateDB {
 	self.currentMu.Lock()
 	defer self.currentMu.Unlock()
 	return self.current.state
 }
 
-func (self *worker) pendingBlock() *types.Block {
+func (self *blockProducer) pendingBlock() *types.Block {
 	self.currentMu.Lock()
 	defer self.currentMu.Unlock()
 
@@ -173,7 +173,7 @@ func (self *worker) pendingBlock() *types.Block {
 	return self.current.Block
 }
 
-func (self *worker) start() {
+func (self *blockProducer) start() {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
@@ -182,14 +182,14 @@ func (self *worker) start() {
 	self.startProduceBlock()
 }
 
-func (self *worker) stop() {
+func (self *blockProducer) stop() {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
 	atomic.StoreInt32(&self.mining, 0)
 }
 
-func (self *worker) update() {
+func (self *blockProducer) update() {
 	events := self.mux.Subscribe(ChainHeadEvent{}, ChainSideEvent{}, TxPreEvent{})
 
 out:
@@ -231,7 +231,7 @@ func newLocalMinedBlock(blockNumber uint64, prevMinedBlocks *uint64RingBuffer) (
 	return minedBlocks
 }
 
-func (self *worker) wait() {
+func (self *blockProducer) wait() {
 	for {
 		for result := range self.recv {
 
@@ -297,7 +297,7 @@ func (self *worker) wait() {
 }
 
 // makeCurrent creates a new environment for the current cycle.
-func (self *worker) makeCurrent(parent *types.Block, header *types.Header) {
+func (self *blockProducer) makeCurrent(parent *types.Block, header *types.Header) {
 	state := state.New(parent.Root(), self.eth.StateDb())
 	current := &Work{
 		state:     state,
@@ -331,7 +331,7 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) {
 	self.current = current
 }
 
-func (w *worker) setGasPrice(p *big.Int) {
+func (w *blockProducer) setGasPrice(p *big.Int) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -342,7 +342,7 @@ func (w *worker) setGasPrice(p *big.Int) {
 	w.mux.Post(GasPriceChanged{w.gasPrice})
 }
 
-func (self *worker) isBlockLocallyMined(deepBlockNum uint64) bool {
+func (self *blockProducer) isBlockLocallyMined(deepBlockNum uint64) bool {
 	//Did this instance mine a block at {deepBlockNum} ?
 	var isLocal = false
 	for idx, blockNum := range self.current.localMinedBlocks.ints {
@@ -362,7 +362,7 @@ func (self *worker) isBlockLocallyMined(deepBlockNum uint64) bool {
 	return block != nil && block.Coinbase() == self.coinbase
 }
 
-func (self *worker) logLocalMinedBlocks(previous *Work) {
+func (self *blockProducer) logLocalMinedBlocks(previous *Work) {
 	if previous != nil && self.current.localMinedBlocks != nil {
 		nextBlockNum := self.current.Block.NumberU64()
 		for checkBlockNum := previous.Block.NumberU64(); checkBlockNum < nextBlockNum; checkBlockNum++ {
@@ -373,14 +373,14 @@ func (self *worker) logLocalMinedBlocks(previous *Work) {
 		}
 	}
 }
-func (self *worker) startProduceBlock() {
+func (self *blockProducer) startProduceBlock() {
     if self.stopCh != nil {
         close(self.stopCh)
     }
     self.stopCh = make(chan struct{})
     go self.produceBlock(self.stopCh)
 }
-func (self *worker) produceBlock(stop <-chan struct{}) {
+func (self *blockProducer) produceBlock(stop <-chan struct{}) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 	self.uncleMu.Lock()
@@ -511,7 +511,7 @@ func (self *worker) produceBlock(stop <-chan struct{}) {
 	}
 }
 
-func (self *worker) getHashOnionPreimage(currentHash common.Hash) (error, []byte) {
+func (self *blockProducer) getHashOnionPreimage(currentHash common.Hash) (error, []byte) {
 
 	var preimage []byte
 	if len(self.hashOnion) > 0 {
@@ -537,7 +537,7 @@ func (self *worker) getHashOnionPreimage(currentHash common.Hash) (error, []byte
 	return glog.V(logger.Error).Infoln("Hash onion does not fit the hash in validator contract"), nil
 }
 
-func (self *worker) commitUncle(uncle *types.Header) error {
+func (self *blockProducer) commitUncle(uncle *types.Header) error {
 	hash := uncle.Hash()
 	if self.current.uncles.Has(hash) {
 		return UncleError("Uncle not unique")
@@ -644,7 +644,7 @@ func accountAddressesSet(accounts []accounts.Account) *set.Set {
 	return accountSet
 }
 
-func (self *worker) loadHashOnion() error {
+func (self *blockProducer) loadHashOnion() error {
 	filePath := self.engine.HashOnionFilePath()
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -666,7 +666,7 @@ func (self *worker) loadHashOnion() error {
 	return nil
 }
 
-func (self *worker) writeHashOnion() error {
+func (self *blockProducer) writeHashOnion() error {
     filePath := self.engine.HashOnionFilePath()
     file, err := os.Create(filePath)
     if err != nil {
