@@ -483,7 +483,7 @@ func (self *Ethereum) SetEtherbase(etherbase common.Address) {
 }
 
 func (s *Ethereum) StopValidator()         { s.validator.Stop() }
-func (s *Ethereum) IsMining() bool      { return s.validator.Running() }
+func (s *Ethereum) IsValidator() bool      { return s.validator.Running() }
 func (s *Ethereum) Validator() *validator.Validator { return s.validator }
 
 // func (s *Ethereum) Logger() logger.LogSystem             { return s.logger }
