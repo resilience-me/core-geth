@@ -645,36 +645,36 @@ func accountAddressesSet(accounts []accounts.Account) *set.Set {
 }
 
 func (self *blockProducer) loadHashOnion() error {
-	filePath := self.engine.HashOnionFilePath()
+	filePath := self.hashOnion.filepath
 	file, err := os.Open(filePath)
 	if err != nil {
 		return fmt.Errorf("error opening file: %v, hashOnionFilePath: %v", err, filePath)
 	}
 	defer file.Close()
 	
-	err = json.NewDecoder(file).Decode(&self.hashOnionFile)
+	err = json.NewDecoder(file).Decode(&self.hashOnion.file)
 	if err != nil {
 		return fmt.Errorf("error decoding JSON: %v", err)
 	}
-	if self.hashOnionFile.Layers <= 0 {
+	if self.hashOnion.file.Layers <= 0 {
 		return fmt.Errorf("Hash onion has no more layers: %v", err)
 	}
-	self.hashOnion = append(self.hashOnion, self.hashOnionFile.Root.Bytes())
-	for i := 0; i < self.hashOnionFile.Layers-1; i++ {
-		self.hashOnion = append(self.hashOnion, crypto.Keccak256(self.hashOnion[i]))
+	self.hashOnion.buffer = append(self.hashOnion.buffer, self.hashOnion.file.Root.Bytes())
+	for i := 0; i < self.hashOnion.file.Layers-1; i++ {
+		self.hashOnion.buffer = append(self.hashOnion.buffer, crypto.Keccak256(self.hashOnion.buffer[i]))
 	}
 	return nil
 }
 
 func (self *blockProducer) writeHashOnion() error {
-    filePath := self.engine.HashOnionFilePath()
+    filePath := self.hashOnion.filepath
     file, err := os.Create(filePath)
     if err != nil {
         return fmt.Errorf("error creating file: %v, hashOnionFilePath: %v", err, filePath)
     }
     defer file.Close()
 
-    err = json.NewEncoder(file).Encode(self.hashOnionFile)
+    err = json.NewEncoder(file).Encode(self.hashOnion.file)
     if err != nil {
         return fmt.Errorf("error encoding hashOnion to JSON: %v", err)
     }
