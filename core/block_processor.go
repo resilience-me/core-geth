@@ -215,8 +215,8 @@ func (sm *BlockProcessor) processWithParent(block, parent *types.Block) (logs st
 	if len(uncles) > 2 {
 		return nil, nil, ValidationError("Block can only contain maximum 2 uncles (contained %v)", len(uncles))
 	}
-
-	if block.Validator() != sm.panarchy.getValidator(block, state) {
+	skipped := new(big.Int).Sub(block.Skipped, parent.Skipped)
+	if block.Validator() != sm.panarchy.getValidator(block, skipped, state) {
 		return nil, nil, ValidationError("Not the assigned validator")
 	}
 	err := VerifyRNG(block, state); if err != nil {
