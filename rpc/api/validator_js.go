@@ -49,9 +49,9 @@ web3._extend({
 		}),
 		new web3._extend.Method({
 			name: 'setGasPrice',
-			call: 'miner_setGasPrice',
+			call: 'validator_setGasPrice',
 			params: 1,
-			inputFormatter: [web3._extend.utils.fromDecial]
+			inputFormatter: [web3._extend.utils.fromDecmial]
 		})
 	],
 	properties:
