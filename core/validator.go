@@ -85,34 +85,34 @@ out:
 	}
 }
 
-func (m *Validator) SetGasPrice(price *big.Int) {
+func (self *Validator) SetGasPrice(price *big.Int) {
 	// FIXME block tests set a nil gas price. Quick dirty fix
 	if price == nil {
 		return
 	}
 
-	m.worker.setGasPrice(price)
+	self.blockProducer.setGasPrice(price)
 }
 
 func (self *Validator) Start(coinbase common.Address) {
 	atomic.StoreInt32(&self.shouldStart, 1)
-	self.worker.coinbase = coinbase
+	self.blockProducer.coinbase = coinbase
 	self.coinbase = coinbase
 
 	if atomic.LoadInt32(&self.canStart) == 0 {
-		glog.V(logger.Info).Infoln("Can not start mining operation due to network sync (starts when finished)")
+		glog.V(logger.Info).Infoln("Can not start block producer operation due to network sync (starts when finished)")
 		return
 	}
 
 	atomic.StoreInt32(&self.mining, 1)
 
-	glog.V(logger.Info).Infof("Starting mining operation (CPU=%d TOT=%d)\n", threads, len(self.worker.agents))
+	glog.V(logger.Info).Infof("Starting block producer operation")
 
-	self.worker.start()
+	self.blockProducer.start()
 }
 
 func (self *Validator) Stop() {
-	self.worker.stop()
+	self.blockProducer.stop()
 	atomic.StoreInt32(&self.mining, 0)
 	atomic.StoreInt32(&self.shouldStart, 0)
 }
@@ -122,14 +122,14 @@ func (self *Validator) Running() bool {
 }
 
 func (self *Validator) PendingState() *state.StateDB {
-	return self.worker.pendingState()
+	return self.blockProducer.pendingState()
 }
 
 func (self *Validator) PendingBlock() *types.Block {
-	return self.worker.pendingBlock()
+	return self.blockProducer.pendingBlock()
 }
 
 func (self *Validator) SetEtherbase(addr common.Address) {
 	self.coinbase = addr
-	self.worker.setEtherbase(addr)
+	self.blockProducer.setEtherbase(addr)
 }
