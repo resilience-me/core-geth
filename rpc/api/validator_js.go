@@ -30,7 +30,7 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'stop',
 			call: 'validator_stop',
-			params: 1,
+			params: 0,
 			inputFormatter: [null]
 		}),
 		new web3._extend.Method({
