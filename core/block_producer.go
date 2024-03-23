@@ -100,7 +100,7 @@ type blockProducer struct {
 	proc    *BlockProcessor
 	extraDb common.Database
 
-	engine  *Panarchy
+	panarchy  *Panarchy
 	hashonion hashonion
 	
 	coinbase common.Address
@@ -122,7 +122,7 @@ type blockProducer struct {
 	fullValidation bool
 }
 
-func newBlockProducer(coinbase common.Address, eth Backend, engine *Panarchy) *worker {
+func newBlockProducer(coinbase common.Address, eth Backend, panarchy *Panarchy) *worker {
 	blockProducer := &blockProducer{
 		eth:            eth,
 		mux:            eth.EventMux(),
@@ -136,7 +136,7 @@ func newBlockProducer(coinbase common.Address, eth Backend, engine *Panarchy) *w
 		txQueue:        make(map[common.Hash]*types.Transaction),
 		quit:           make(chan struct{}),
 		fullValidation: false,
-		engine: engine,
+		panarchy: panarchy,
 	}
 	go blockProducer.update()
 	go blockProducer.wait()
@@ -390,7 +390,7 @@ func (self *blockProducer) produceBlock(stop <-chan struct{}) {
 
 	parent := self.chain.CurrentBlock()
 
-	tstamp := parent.Time().Int64() + self.engine.Period()
+	tstamp := parent.Time().Int64() + self.panarchy.Period()
 
 	now := time.Now().Unix()
 	if tstamp < now {
@@ -400,7 +400,7 @@ func (self *blockProducer) produceBlock(stop <-chan struct{}) {
 	num := new(big.Int).Add(parent.Number(), common.Big1)
 	
 	if atomic.LoadInt32(&self.mining) == 1 {
-		index := self.engine.schedule(parent.Time())
+		index := self.panarchy.schedule(parent.Time())
 		electionLength := electionLength(index, self.current.state)
 		delay := time.Unix(tstamp, 0).Sub(time.Now())
 		loop:
@@ -415,10 +415,10 @@ func (self *blockProducer) produceBlock(stop <-chan struct{}) {
 					break loop
 				}
 				i.Add(i, common.Big1)
-				delay = time.Duration(self.engine.Deadline()) * time.Second
+				delay = time.Duration(self.panarchy.Deadline()) * time.Second
 			}
 		}
-		tstamp += int64(self.engine.Deadline())*i.Int64()
+		tstamp += int64(self.panarchy.Deadline())*i.Int64()
 	}
 
 	
