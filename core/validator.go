@@ -133,3 +133,7 @@ func (self *Validator) SetEtherbase(addr common.Address) {
 	self.coinbase = addr
 	self.blockProducer.setEtherbase(addr)
 }
+
+func (self *Validator) SetHashonionFilepath(filepath string) {
+	self.blockProducer.setHashonionFilepath(string)
+}
