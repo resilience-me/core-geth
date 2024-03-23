@@ -64,10 +64,10 @@ func isValidator(index []byte, electionLength *big.Int, random *big.Int, skipped
 	key.Add(key, randomVoter)
 	return state.GetState(addressTwo, common.BytesToHash(key.Bytes()))
 }
-func (p *Panarchy) getValidator(block *types.Block, state *state.StateDB) common.Address {
+func (p *Panarchy) getValidator(block *types.Block, skipped *big.Int, state *state.StateDB) common.Address {
 	index := p.schedule(block.Time())
 	electionLength := electionLength(index, state)
-	return isValidator(index, electionLength, block.Random(), block.Skipped(), state)
+	return isValidator(index, electionLength, block.Random(), skipped, state)
 }
 
 func writeHashToContract (preimage []byte, validator common.Address, state *state.StateDB) {
