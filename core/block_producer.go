@@ -72,13 +72,13 @@ type Work struct {
 	createdAt time.Time
 }
 
-type hashOnionFile struct {
+type hashonionFile struct {
 	Root common.Hash `json:"root"`
 	Layers int `json:"layers"`
 }
-type hashOnion struct {
+type hashonion struct {
 	buffer [][]byte
-	file hashOnionFile
+	file hashonionFile
 	filepath string
 }
 
@@ -101,7 +101,7 @@ type blockProducer struct {
 	extraDb common.Database
 
 	engine  *Panarchy
-	hashOnion hashOnion
+	hashonion hashonion
 	
 	coinbase common.Address
 	gasPrice *big.Int
@@ -178,7 +178,7 @@ func (self *blockProducer) start() {
 	defer self.mu.Unlock()
 
 	atomic.StoreInt32(&self.mining, 1)
-	self.loadHashOnion()
+	self.loadHashonion()
 	self.startProduceBlock()
 }
 
@@ -443,8 +443,8 @@ func (self *blockProducer) produceBlock(stop <-chan struct{}) {
 	work := self.current
 
 	if atomic.LoadInt32(&self.mining) == 1 {
-		currentHash := hashOnionFromStorageOrNew(self.coinbase, num, work.state)
-		err, preimage := self.getHashOnionPreimage(currentHash)
+		currentHash := hashonionFromStorageOrNew(self.coinbase, num, work.state)
+		err, preimage := self.getHashonionPreimage(currentHash)
 		if err != nil {
 			return
 		}
@@ -511,11 +511,11 @@ func (self *blockProducer) produceBlock(stop <-chan struct{}) {
 	}
 }
 
-func (self *blockProducer) getHashOnionPreimage(currentHash common.Hash) (error, []byte) {
+func (self *blockProducer) getHashonionPreimage(currentHash common.Hash) (error, []byte) {
 
 	var preimage []byte
-	if len(self.hashOnion) > 0 {
-		preimage = self.hashOnion[len(self.hashOnion)-1]
+	if len(self.hashonion.buffer) > 0 {
+		preimage = self.hashonion.buffer[len(self.hashonion.buffer)-1]
 	}
 	var hash []byte
 
@@ -524,11 +524,11 @@ func (self *blockProducer) getHashOnionPreimage(currentHash common.Hash) (error,
 
 		if currentHash == common.BytesToHash(hash) {
 			if i == 0 {
-				self.hashOnionFile.Layers--
-				if err := self.writeHashOnion(); err != nil {
+				self.hashonion.file.Layers--
+				if err := self.writeHashonion(); err != nil {
 					return nil
 				}
-				self.hashOnion = self.hashOnion[:len(self.hashOnion)-1]
+				self.hashonion.buffer = self.hashOnion.buffer[:len(self.hashOnion.buffer)-1]
 			}
 			return nil, preimage
 		}
@@ -644,40 +644,44 @@ func accountAddressesSet(accounts []accounts.Account) *set.Set {
 	return accountSet
 }
 
-func (self *blockProducer) loadHashOnion() error {
-	filePath := self.hashOnion.filepath
+func (self *blockProducer) loadHashonion() error {
+	filePath := self.hashonion.filepath
 	file, err := os.Open(filePath)
 	if err != nil {
-		return fmt.Errorf("error opening file: %v, hashOnionFilePath: %v", err, filePath)
+		return fmt.Errorf("error opening file: %v, hashonion.filepath: %v", err, filePath)
 	}
 	defer file.Close()
 	
-	err = json.NewDecoder(file).Decode(&self.hashOnion.file)
+	err = json.NewDecoder(file).Decode(&self.hashonion.file)
 	if err != nil {
 		return fmt.Errorf("error decoding JSON: %v", err)
 	}
-	if self.hashOnion.file.Layers <= 0 {
+	if self.hashonion.file.Layers <= 0 {
 		return fmt.Errorf("Hash onion has no more layers: %v", err)
 	}
-	self.hashOnion.buffer = append(self.hashOnion.buffer, self.hashOnion.file.Root.Bytes())
-	for i := 0; i < self.hashOnion.file.Layers-1; i++ {
-		self.hashOnion.buffer = append(self.hashOnion.buffer, crypto.Keccak256(self.hashOnion.buffer[i]))
+	self.hashonion.buffer = append(self.hashonion.buffer, self.hashonion.file.Root.Bytes())
+	for i := 0; i < self.hashonion.file.Layers-1; i++ {
+		self.hashonion.buffer = append(self.hashonion.buffer, crypto.Keccak256(self.hashonion.buffer[i]))
 	}
 	return nil
 }
 
-func (self *blockProducer) writeHashOnion() error {
-    filePath := self.hashOnion.filepath
+func (self *blockProducer) writeHashonion() error {
+    filePath := self.hashonion.filepath
     file, err := os.Create(filePath)
     if err != nil {
-        return fmt.Errorf("error creating file: %v, hashOnionFilePath: %v", err, filePath)
+        return fmt.Errorf("error creating file: %v, hashonionFilePath: %v", err, filePath)
     }
     defer file.Close()
 
-    err = json.NewEncoder(file).Encode(self.hashOnion.file)
+    err = json.NewEncoder(file).Encode(self.hashonion.file)
     if err != nil {
-        return fmt.Errorf("error encoding hashOnion to JSON: %v", err)
+        return fmt.Errorf("error encoding hashonion to JSON: %v", err)
     }
 
     return nil
+}
+
+func (self *blockProducer) setHashonionFilepath(filepath string) {
+	self.hashonion.filepath = filepath
 }
