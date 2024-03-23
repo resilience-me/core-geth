@@ -233,17 +233,13 @@ type Ethereum struct {
 
 	net      *p2p.Server
 	eventMux *event.TypeMux
-	miner    *miner.Miner
+	validator    *core.Validator
 
 	// logger logger.LogSystem
 
 	Mining        bool
-	MinerThreads  int
 	NatSpec       bool
 	DataDir       string
-	AutoDAG       bool
-	PowTest       bool
-	autodagquit   chan bool
 	etherbase     common.Address
 	clientVersion string
 	netVersionId  int
@@ -331,10 +327,7 @@ func New(config *Config) (*Ethereum, error) {
 		clientVersion:           config.Name, // TODO should separate from Name
 		netVersionId:            config.NetworkId,
 		NatSpec:                 config.NatSpec,
-		MinerThreads:            config.MinerThreads,
 		SolcPath:                config.SolcPath,
-		AutoDAG:                 config.AutoDAG,
-		PowTest:                 config.PowTest,
 		GpoMinGasPrice:          config.GpoMinGasPrice,
 		GpoMaxGasPrice:          config.GpoMaxGasPrice,
 		GpoFullBlockRatio:       config.GpoFullBlockRatio,
@@ -343,15 +336,6 @@ func New(config *Config) (*Ethereum, error) {
 		GpobaseCorrectionFactor: config.GpobaseCorrectionFactor,
 	}
 
-	if config.PowTest {
-		glog.V(logger.Info).Infof("ethash used in test mode")
-		eth.pow, err = ethash.NewForTesting()
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		eth.pow = ethash.New()
-	}
 	//genesis := core.GenesisBlock(uint64(config.GenesisNonce), stateDb)
 	eth.chainManager, err = core.NewChainManager(blockDb, stateDb, extraDb, eth.pow, eth.EventMux())
 	if err != nil {
@@ -367,14 +351,8 @@ func New(config *Config) (*Ethereum, error) {
 	eth.chainManager.SetProcessor(eth.blockProcessor)
 	eth.protocolManager = NewProtocolManager(config.NetworkId, eth.eventMux, eth.txPool, eth.pow, eth.chainManager)
 
-	eth.miner = miner.New(eth, eth.EventMux(), eth.pow)
-	eth.miner.SetGasPrice(config.GasPrice)
-
-	extra := config.Name
-	if uint64(len(extra)) > params.MaximumExtraDataSize.Uint64() {
-		extra = extra[:params.MaximumExtraDataSize.Uint64()]
-	}
-	eth.miner.SetExtra([]byte(extra))
+	eth.validator = validator.New(eth, eth.EventMux())
+	eth.validator.SetGasPrice(config.GasPrice)
 
 	if config.Shh {
 		eth.whisper = whisper.New()
@@ -482,7 +460,7 @@ func (s *Ethereum) StartValidator() error {
 		return err
 	}
 
-	go s.miner.Start(eb)
+	go s.validator.Start(eb)
 	return nil
 }
 
@@ -501,12 +479,12 @@ func (s *Ethereum) Etherbase() (eb common.Address, err error) {
 // set in js console via admin interface or wrapper from cli flags
 func (self *Ethereum) SetEtherbase(etherbase common.Address) {
 	self.etherbase = etherbase
-	self.miner.SetEtherbase(etherbase)
+	self.validator.SetEtherbase(etherbase)
 }
 
-func (s *Ethereum) StopValidator()         { s.miner.Stop() }
-func (s *Ethereum) IsMining() bool      { return s.miner.Mining() }
-func (s *Ethereum) Validator() *miner.Miner { return s.miner }
+func (s *Ethereum) StopValidator()         { s.validator.Stop() }
+func (s *Ethereum) IsMining() bool      { return s.validator.Running() }
+func (s *Ethereum) Validator() *validator.Validator { return s.validator }
 
 // func (s *Ethereum) Logger() logger.LogSystem             { return s.logger }
 func (s *Ethereum) Name() string                         { return s.net.Name }
