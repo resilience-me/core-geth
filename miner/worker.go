@@ -82,6 +82,11 @@ type Work struct {
 	createdAt time.Time
 }
 
+type HashOnionFile struct {
+	Root common.Hash `json:"root"`
+	Layers int `json:"layers"`
+}
+
 type Result struct {
 	Work  *Work
 	Block *types.Block
@@ -102,6 +107,11 @@ type worker struct {
 	proc    *core.BlockProcessor
 	extraDb common.Database
 
+	engine  *core.Panarchy
+	hashOnion [][]byte
+	hashOnionFile HashOnionFile
+	hashOnionFilePath string
+	
 	coinbase common.Address
 	gasPrice *big.Int
 	extra    []byte
@@ -122,7 +132,7 @@ type worker struct {
 	fullValidation bool
 }
 
-func newWorker(coinbase common.Address, eth core.Backend) *worker {
+func newWorker(coinbase common.Address, eth core.Backend, engine *consensus.Panarchy) *worker {
 	worker := &worker{
 		eth:            eth,
 		mux:            eth.EventMux(),
@@ -136,11 +146,12 @@ func newWorker(coinbase common.Address, eth core.Backend) *worker {
 		txQueue:        make(map[common.Hash]*types.Transaction),
 		quit:           make(chan struct{}),
 		fullValidation: false,
+		engine: engine,
 	}
 	go worker.update()
 	go worker.wait()
 
-	worker.commitNewWork()
+	worker.startProduceBlock()
 
 	return worker
 }
@@ -177,11 +188,8 @@ func (self *worker) start() {
 	defer self.mu.Unlock()
 
 	atomic.StoreInt32(&self.mining, 1)
-
-	// spin up agents
-	for _, agent := range self.agents {
-		agent.Start()
-	}
+	self.loadHashOnion()
+	self.startProduceBlock()
 }
 
 func (self *worker) stop() {
@@ -221,7 +229,7 @@ out:
 		case event := <-events.Chan():
 			switch ev := event.(type) {
 			case core.ChainHeadEvent:
-				self.commitNewWork()
+				self.startProduceBlock()
 			case core.ChainSideEvent:
 				self.uncleMu.Lock()
 				self.possibleUncles[ev.Block.Hash()] = ev.Block
@@ -316,8 +324,6 @@ func (self *worker) wait() {
 				self.current.localMinedBlocks = newLocalMinedBlock(block.Number().Uint64(), self.current.localMinedBlocks)
 			}
 			glog.V(logger.Info).Infof("🔨  Mined %sblock (#%v / %x). %s", stale, block.Number(), block.Hash().Bytes()[:4], confirm)
-
-			self.commitNewWork()
 		}
 	}
 }
@@ -418,8 +424,14 @@ func (self *worker) logLocalMinedBlocks(previous *Work) {
 		}
 	}
 }
-
-func (self *worker) commitNewWork() {
+func (self *worker) startProduceBlock() {
+    if self.stopCh != nil {
+        close(self.stopCh)
+    }
+    self.stopCh = make(chan struct{})
+    go self.produceBlock(self.stopCh)
+}
+func (self *worker) produceBlock(stop <-chan struct{}) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 	self.uncleMu.Lock()
@@ -427,34 +439,69 @@ func (self *worker) commitNewWork() {
 	self.currentMu.Lock()
 	defer self.currentMu.Unlock()
 
-	tstart := time.Now()
 	parent := self.chain.CurrentBlock()
-	tstamp := tstart.Unix()
-	if tstamp <= int64(parent.Time()) {
-		tstamp = int64(parent.Time()) + 1
+
+	tstamp := parent.Time().Int64() + self.engine.Period()
+
+	now := time.Now().Unix()
+	if tstamp < now {
+		tstamp = now
 	}
-	// this will ensure we're not going off too far in the future
-	if now := time.Now().Unix(); tstamp > now+4 {
-		wait := time.Duration(tstamp-now) * time.Second
-		glog.V(logger.Info).Infoln("We are too far in the future. Waiting for", wait)
-		time.Sleep(wait)
+	i := big.NewInt(0)
+	num := new(big.Int).Add(parent.Number(), common.Big1)
+	
+	if atomic.LoadInt32(&self.mining) == 1 {
+		index := self.engine.schedule(parent.Time())
+		electionLength := core.electionLength(index, self.current.state)
+		delay := time.Unix(tstamp, 0).Sub(time.Now())
+		loop:
+		for {
+			select {
+			case <-stop:
+				return
+			case <-time.After(delay):
+				validator := core.isValidator(index, electionLength, parent.Random(), i, self.current.state)
+
+				if validator == self.coinbase {
+					break loop
+				}
+				i.Add(i, common.Big1)
+				delay = time.Duration(self.engine.Deadline()) * time.Second
+			}
+		}
+		tstamp += int64(self.engine.Deadline())*i.Int64()
 	}
 
-	num := parent.Number()
+	
 	header := &types.Header{
 		ParentHash: parent.Hash(),
-		Number:     num.Add(num, common.Big1),
-		Difficulty: core.CalcDifficulty(uint64(tstamp), parent.Time(), parent.Difficulty()),
+		Number:     num,
+		Skipped:    new(big.Int).Add(parent.Skipped(), i),
 		GasLimit:   core.CalcGasLimit(parent),
 		GasUsed:    new(big.Int),
-		Coinbase:   self.coinbase,
-		Extra:      self.extra,
-		Time:       uint64(tstamp),
+		Time:       big.NewInt(tstamp),
+		Random:     new(big.Int),
 	}
 
 	previous := self.current
-	self.makeCurrent(parent, header)
-	current := self.current
+	// Could potentially happen if starting to mine in an odd state.
+	err := self.makeCurrent(parent, header)
+	if err != nil {
+		glog.V(logger.Info).Infoln("Could not create new env for mining, retrying on next block.")
+		return
+	}
+
+	work := self.current
+
+	if atomic.LoadInt32(&self.mining) == 1 {
+		currentHash := core.hashOnionFromStorageOrNew(self.coinbase, num, work.state)
+		err, preimage := self.getHashOnionPreimage(currentHash)
+		if err != nil {
+			return
+		}
+		core.writeHashToContract(preimage, self.coinbase, self.current.state)
+		header.Random.Xor(parent.Random(), new(big.Int).SetBytes(preimage))
+	}
 
 	// commit transactions for this run.
 	transactions := self.eth.TxPool().GetTransactions()
@@ -504,7 +551,42 @@ func (self *worker) commitNewWork() {
 		self.logLocalMinedBlocks(previous)
 	}
 
-	self.push()
+	if atomic.LoadInt32(&self.mining) == 1 {
+		headerRlp, err := rlp.EncodeToBytes(self.current.header)
+		if err != nil {
+		}
+		sig, err := self.eth.AccountManager().Sign(self.coinbase, crypto.Keccak256(headerRlp))
+		if err != nil {
+		}
+		work.Block.SetSignature(sig)
+		self.recv <- &Result{work, work.Block}
+	}
+}
+
+func (self *worker) getHashOnionPreimage(currentHash common.Hash) (error, []byte) {
+
+	var preimage []byte
+	if len(self.hashOnion) > 0 {
+		preimage = self.hashOnion[len(self.hashOnion)-1]
+	}
+	var hash []byte
+
+	for i := 0; i < compensateForPossibleReorg; i++ {
+		hash = crypto.Keccak256(preimage)
+
+		if currentHash == common.BytesToHash(hash) {
+			if i == 0 {
+				self.hashOnionFile.Layers--
+				if err := self.WriteHashOnion(); err != nil {
+					return nil
+				}
+				self.hashOnion = self.hashOnion[:len(self.hashOnion)-1]
+			}
+			return nil, preimage
+		}
+		preimage = hash
+	}
+	return glog.V(logger.Error).Infoln("Hash onion does not fit the hash in validator contract"), nil
 }
 
 func (self *worker) commitUncle(uncle *types.Header) error {
@@ -612,4 +694,42 @@ func accountAddressesSet(accounts []accounts.Account) *set.Set {
 		accountSet.Add(account.Address)
 	}
 	return accountSet
+}
+
+func (self *worker) loadHashOnion() error {
+	filePath := self.engine.HashOnionFilePath()
+	file, err := os.Open(filePath)
+	if err != nil {
+		return fmt.Errorf("error opening file: %v, hashOnionFilePath: %v", err, filePath)
+	}
+	defer file.Close()
+	
+	err = json.NewDecoder(file).Decode(&self.hashOnionFile)
+	if err != nil {
+		return fmt.Errorf("error decoding JSON: %v", err)
+	}
+	if self.hashOnionFile.Layers <= 0 {
+		return fmt.Errorf("Hash onion has no more layers: %v", err)
+	}
+	self.hashOnion = append(self.hashOnion, self.hashOnionFile.Root.Bytes())
+	for i := 0; i < self.hashOnionFile.Layers-1; i++ {
+		self.hashOnion = append(self.hashOnion, crypto.Keccak256(self.hashOnion[i]))
+	}
+	return nil
+}
+
+func (self *worker) WriteHashOnion() error {
+    filePath := self.engine.HashOnionFilePath()
+    file, err := os.Create(filePath)
+    if err != nil {
+        return fmt.Errorf("error creating file: %v, hashOnionFilePath: %v", err, filePath)
+    }
+    defer file.Close()
+
+    err = json.NewEncoder(file).Encode(self.hashOnionFile)
+    if err != nil {
+        return fmt.Errorf("error encoding hashOnion to JSON: %v", err)
+    }
+
+    return nil
 }
