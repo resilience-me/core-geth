@@ -496,7 +496,7 @@ func (self *ChainManager) WriteBlock(block *types.Block, queued bool) (status wr
 	} else if externContinuity.Cmp(localContinuity) > 0 {
 		// chain fork
 		// during split we merge two different chains and create the new canonical chain
-		if err := self.merge(cblock, block); err != nil {
+		if err := self.merge(self.currentBlock, block); err != nil {
 			return NonStatTy, err
 		}
 		status = SplitStatTy
