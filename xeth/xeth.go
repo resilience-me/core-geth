@@ -414,8 +414,8 @@ func (self *XEth) PeerCount() int {
 	return self.backend.PeerCount()
 }
 
-func (self *XEth) IsMining() bool {
-	return self.backend.IsMining()
+func (self *XEth) IsValidating() bool {
+	return self.backend.IsValidating()
 }
 
 func (self *XEth) HashRate() int64 {
