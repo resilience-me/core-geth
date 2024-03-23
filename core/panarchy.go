@@ -52,31 +52,31 @@ func (p *Panarchy) schedule(timestamp *big.Int) []byte {
 	schedule := new(big.Int).Div(new(big.Int).Sub(timestamp, p.schedule.genesis), p.schedule.period)
 	index := common.LeftPadBytes(schedule.Bytes(), 32)
 }
-func (p *Panarchy) electionLength(index []byte, state *state.StateDB) *big.Int {
+func electionLength(index []byte, state *state.StateDB) *big.Int {
 	lengthKey := crypto.Keccak256Hash(append(index, slotTwo...))
 	electionLength := state.GetState(addressTwo, lengthKey)
 	return new(big.Int).SetBytes(electionLength.Bytes())	
 }
-func (p *Panarchy) isValidator(index []byte, electionLength *big.Int, random *big.Int, skipped *big.Int, state *state.StateDB) common.Address {
+func isValidator(index []byte, electionLength *big.Int, random *big.Int, skipped *big.Int, state *state.StateDB) common.Address {
 	randomVoter := new(big.Int).Add(random, skipped)
 	randomVoter.Mod(randomVoter, electionLength)
 	key := new(big.Int).SetBytes(crypto.Keccak256(crypto.Keccak256(append(index, slotTwo...))))
 	key.Add(key, randomVoter)
 	return state.GetState(addressTwo, common.BytesToHash(key.Bytes()))
 }
-func (p *Panarchy) getValidator(timestamp *big.Int, random *big.Int, skipped *big.Int, state *state.StateDB) common.Address {
-	index := p.schedule(timestamp)
+func (p *Panarchy) getValidator(block *types.Block, state *state.StateDB) common.Address {
+	index := p.schedule(block.Time())
 	electionLength := electionLength(index, state)
-	return isValidator(index, electionLength, random, skipped, state)
+	return isValidator(index, electionLength, block.Random(), block.Skipped(), state)
 }
 
-func (p *Panarchy) writeHashToContract (preimage []byte, validator common.Address, state *state.StateDB) {
+func writeHashToContract (preimage []byte, validator common.Address, state *state.StateDB) {
 	validatorPadded := common.LeftPadBytes(validator.Bytes(), 32)
 	hashOnion := crypto.Keccak256Hash(append(validatorPadded, slotOne...))
 	self.current.state.SetState(addressOne, hashOnion, common.BytesToHash(preimage))
 }
 
-func (p *Panarchy) hashOnionFromStorageOrNew(validator common.Address, blockNumber *big.Int, state *state.StateDB) (hash common.Hash) {
+func hashOnionFromStorageOrNew(validator common.Address, blockNumber *big.Int, state *state.StateDB) common.Hash {
 	validatorPadded := common.LeftPadBytes(validator.Bytes(), 32)
 	pending := crypto.Keccak256(append(validatorPadded, slotTwo...))
 	validSinceField := new(big.Int).Add(new(big.Int).SetBytes(pending), common.Big1)
@@ -85,11 +85,11 @@ func (p *Panarchy) hashOnionFromStorageOrNew(validator common.Address, blockNumb
 	validSince := new(big.Int).SetBytes(data.Bytes())
 	if validSince.Cmp(common.Big0) == 0 || blockNumber.Cmp(validSince) < 0 {
 		hashOnion := crypto.Keccak256Hash(append(validatorPadded, slotOne...))
-		hash = state.GetState(addressOne, hashOnion)
+		return state.GetState(addressOne, hashOnion)
 	} else {
-		hash = state.GetState(p.random.addr, common.BytesToHash(pending))
-		state.SetState(p.random.addr, common.BytesToHash(pending), common.Hash{})
-		state.SetState(p.random.addr, common.BytesToHash(validSinceField.Bytes()), common.Hash{})
+		hash := state.GetState(addressOne, common.BytesToHash(pending))
+		state.SetState(addressOne, common.BytesToHash(pending), common.Hash{})
+		state.SetState(addressOne, common.BytesToHash(validSinceField.Bytes()), common.Hash{})
+		return hash
 	}
-	return
 }
