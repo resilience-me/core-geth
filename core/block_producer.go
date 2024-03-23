@@ -72,9 +72,14 @@ type Work struct {
 	createdAt time.Time
 }
 
-type HashOnionFile struct {
+type hashOnionFile struct {
 	Root common.Hash `json:"root"`
 	Layers int `json:"layers"`
+}
+type hashOnion struct {
+	buffer [][]byte
+	file hashOnionFile
+	filepath string
 }
 
 type Result struct {
@@ -96,9 +101,7 @@ type worker struct {
 	extraDb common.Database
 
 	engine  *Panarchy
-	hashOnion [][]byte
-	hashOnionFile HashOnionFile
-	hashOnionFilePath string
+	hashOnion hashOnion
 	
 	coinbase common.Address
 	gasPrice *big.Int
