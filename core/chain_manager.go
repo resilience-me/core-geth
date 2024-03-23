@@ -484,26 +484,27 @@ func (self *ChainManager) WriteBlock(block *types.Block, queued bool) (status wr
 	self.wg.Add(1)
 	defer self.wg.Done()
 
-	cblock := self.currentBlock
-	// Compare the TD of the last known block in the canonical chain to make sure it's greater.
+	// Compare the continuity of the last known block in the canonical chain to make sure it's greater.
 	// At this point it's possible that a different chain (fork) becomes the new canonical chain.
-	if block.Td.Cmp(self.Td()) > 0 {
-		// chain fork
-		if block.ParentHash() != cblock.Hash() {
-			// during split we merge two different chains and create the new canonical chain
-			err := self.merge(cblock, block)
-			if err != nil {
-				return NonStatTy, err
-			}
 
-			status = SplitStatTy
+	localContinuity := new(big.Int).Sub(self.currentBlock.Number(), self.currentBlock.Skipped())
+	externContinuity := new(big.Int).Sub(block.Number(), block.Skipped())
+
+	if block.ParentHash() == self.currentBlock.Hash() {
+		self.insert(block)
+		status = CanonStatTy
+	} else if externContinuity.Cmp(localContinuity) > 0 {
+		// chain fork
+		// during split we merge two different chains and create the new canonical chain
+		if err := self.merge(cblock, block); err != nil {
+			return NonStatTy, err
 		}
+		status = SplitStatTy
 
 		self.mu.Lock()
-		self.setTotalDifficulty(block.Td)
 		self.insert(block)
 		self.mu.Unlock()
-
+	
 		status = CanonStatTy
 	} else {
 		status = SideStatTy
