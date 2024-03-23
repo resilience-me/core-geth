@@ -215,11 +215,8 @@ func (sm *BlockProcessor) processWithParent(block, parent *types.Block) (logs st
 	if len(uncles) > 2 {
 		return nil, nil, ValidationError("Block can only contain maximum 2 uncles (contained %v)", len(uncles))
 	}
-	skipped := new(big.Int).Sub(block.Skipped, parent.Skipped)
-	if block.Validator() != sm.panarchy.getValidator(block, skipped, state) {
-		return nil, nil, ValidationError("Not the assigned validator")
-	}
-	err := VerifyRNG(block, state); if err != nil {
+
+	if err = sm.VerifyPanarchy(block, parent, state, true); err != nil {
 		return nil, nil, err
 	}
 
@@ -304,16 +301,21 @@ func AccumulateRewards(statedb *state.StateDB, header *types.Header, uncles []*t
 	statedb.AddBalance(header.Coinbase, reward)
 }
 
-func (sm *BlockProcessor) VerifyRNG(block *types.Block, state *state.StateDB) error {
-
-	currentHash := hashOnionFromStorageOrNew(block.Validator(), block.Number(), state)
-
+func (sm *BlockProcessor) VerifyPanarchy(block, parent *types.Block, state *state.StateDB, writeToContract bool) error {
+	skipped := new(big.Int).Sub(block.Skipped, parent.Skipped)
+	validator := block.Validator()
+	if validator != sm.panarchy.getValidator(block, skipped, state) {
+		return ValidationError("Not the assigned validator")
+	}
+	currentHash := hashOnionFromStorageOrNew(validator, block.Number(), state)
 	preimage := new(big.Int).Xor(block.Random(), parent.Random())
 	hash := crypto.Keccak256Hash(preimage.Bytes())
 	if hash != currentHash {
 		return fmt.Errorf("block rng hash not valid")
 	}
-	writeHashToContract(preimage, block.Validator())
+	if writeToContract {
+		writeHashToContract(preimage, validator)
+	}
 	return nil
 }
 
@@ -353,6 +355,10 @@ func (sm *BlockProcessor) VerifyUncles(statedb *state.StateDB, block, parent *ty
 
 		if err := ValidateHeader(uncle, ancestors[uncle.ParentHash]); err != nil {
 			return ValidationError(fmt.Sprintf("uncle[%d](%x) header invalid: %v", i, hash[:4], err))
+		}
+		state := state.New(ancestors[uncle.ParentHash].Root()
+		if err := sm.VerifyPanarchy(uncle, ancestors[uncle.ParentHash], state, false)); err != nil {
+			return ValidationError(fmt.Sprintf("uncle verification failed: %v", err))
 		}
 	}
 
