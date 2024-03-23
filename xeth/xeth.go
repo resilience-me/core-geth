@@ -414,8 +414,8 @@ func (self *XEth) PeerCount() int {
 	return self.backend.PeerCount()
 }
 
-func (self *XEth) IsValidating() bool {
-	return self.backend.IsValidating()
+func (self *XEth) IsValidator() bool {
+	return self.backend.IsValidator()
 }
 
 func (self *XEth) HashRate() int64 {
@@ -439,15 +439,15 @@ func (self *XEth) ClientVersion() string {
 }
 
 func (self *XEth) SetValidating(shouldvalidate bool) bool {
-	isvalidating := self.backend.IsValidating()
-	if shouldvalidate && !isvalidating {
-		err := self.backend.StartValidating()
+	isvalidator := self.backend.IsValidator()
+	if shouldvalidate && !isvalidator {
+		err := self.backend.StartValidator()
 		return err == nil
 	}
-	if isvalidating && !shouldvalidate {
-		self.backend.StopValidating()
+	if isvalidator && !shouldvalidate {
+		self.backend.StopValidator()
 	}
-	return self.backend.IsValidating()
+	return self.backend.IsValidator()
 }
 
 func (self *XEth) IsListening() bool {
