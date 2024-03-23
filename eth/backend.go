@@ -41,20 +41,11 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/logger"
 	"github.com/ethereum/go-ethereum/logger/glog"
-	"github.com/ethereum/go-ethereum/miner"
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/nat"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/whisper"
-)
-
-const (
-	epochLength    = 30000
-	ethashRevision = 23
-
-	autoDAGcheckInterval = 10 * time.Hour
-	autoDAGepochHeight   = epochLength / 2
 )
 
 var (
@@ -89,7 +80,6 @@ type Config struct {
 	LogJSON   string
 	VmDebug   bool
 	NatSpec   bool
-	AutoDAG   bool
 	PowTest   bool
 
 	MaxPeers        int
@@ -110,7 +100,6 @@ type Config struct {
 
 	Etherbase      common.Address
 	GasPrice       *big.Int
-	MinerThreads   int
 	AccountManager *accounts.Manager
 	SolcPath       string
 
@@ -519,10 +508,6 @@ func (s *Ethereum) Start() error {
 	}
 	// periodically flush databases
 	go s.syncDatabases()
-
-	if s.AutoDAG {
-		s.StartAutoDAG()
-	}
 
 	s.protocolManager.Start()
 
