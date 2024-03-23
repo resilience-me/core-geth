@@ -41,6 +41,13 @@ web3._extend({
 			outputFormatter: web3._extend.formatters.formatOutputBool
 		}),
 		new web3._extend.Method({
+			name: 'setHashonionFilepath',
+			call: 'validator_hashonion',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.formatInputInt],
+			outputFormatter: web3._extend.formatters.formatOutputBool
+		}),
+		new web3._extend.Method({
 			name: 'setGasPrice',
 			call: 'miner_setGasPrice',
 			params: 1,
