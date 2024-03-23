@@ -207,7 +207,7 @@ func (sm *BlockProcessor) processWithParent(block, parent *types.Block) (logs st
 	txs := block.Transactions()
 
 	// Block validation
-	if err = ValidateHeader(sm.Pow, header, parent, false); err != nil {
+	if err = ValidateHeader(header, parent); err != nil {
 		return
 	}
 
@@ -351,7 +351,7 @@ func (sm *BlockProcessor) VerifyUncles(statedb *state.StateDB, block, parent *ty
 			return UncleError("uncle[%d](%x)'s parent is not ancestor (%x)", i, hash[:4], uncle.ParentHash[0:4])
 		}
 
-		if err := ValidateHeader(sm.Pow, uncle, ancestors[uncle.ParentHash], true); err != nil {
+		if err := ValidateHeader(uncle, ancestors[uncle.ParentHash]); err != nil {
 			return ValidationError(fmt.Sprintf("uncle[%d](%x) header invalid: %v", i, hash[:4], err))
 		}
 	}
@@ -403,6 +403,10 @@ func ValidateHeader(block *types.Header, parent *types.Block) error {
 		return BlockEqualTSErr
 	}
 
+	if block.Skipped() < parent.Skipped() {
+		return fmt.Errorf("Total skipped value cannot be less than previous block")
+	}
+	
 	var a, b *big.Int
 	a = parent.GasLimit()
 	a = a.Sub(a, block.GasLimit)
