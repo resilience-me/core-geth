@@ -438,16 +438,16 @@ func (self *XEth) ClientVersion() string {
 	return self.backend.ClientVersion()
 }
 
-func (self *XEth) SetMining(shouldmine bool, threads int) bool {
-	ismining := self.backend.IsMining()
-	if shouldmine && !ismining {
-		err := self.backend.StartMining(threads)
+func (self *XEth) SetValidating(shouldvalidate bool) bool {
+	isvalidating := self.backend.IsValidating()
+	if shouldvalidate && !isvalidating {
+		err := self.backend.StartValidating()
 		return err == nil
 	}
-	if ismining && !shouldmine {
-		self.backend.StopMining()
+	if isvalidating && !shouldvalidate {
+		self.backend.StopValidating()
 	}
-	return self.backend.IsMining()
+	return self.backend.IsValidating()
 }
 
 func (self *XEth) IsListening() bool {
