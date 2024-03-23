@@ -403,7 +403,7 @@ func ValidateHeader(block *types.Header, parent *types.Block) error {
 		return BlockEqualTSErr
 	}
 
-	if block.Skipped() < parent.Skipped() {
+	if block.Skipped.Cmp(parent.Skipped) < 0 {
 		return fmt.Errorf("Total skipped value cannot be less than previous block")
 	}
 	
