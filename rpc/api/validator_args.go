@@ -71,3 +71,26 @@ func (args *SetEtherbaseArgs) UnmarshalJSON(b []byte) (err error) {
 
 	return shared.NewInvalidTypeError("Etherbase", "not a string")
 }
+
+
+type SetHashonionFilepathArgs struct {
+	Filepath string
+}
+
+func (args *SetHashonionFilepathArgs) UnmarshalJSON(b []byte) (err error) {
+	var obj []interface{}
+	if err := json.Unmarshal(b, &obj); err != nil {
+		return shared.NewDecodeParamError(err.Error())
+	}
+
+	if len(obj) < 1 {
+		return shared.NewInsufficientParamsError(len(obj), 1)
+	}
+
+	if filepath, ok := obj[0].(string); ok {
+		args.Filepath = filepath
+		return nil
+	}
+
+	return shared.NewInvalidTypeError("Filepath", "not a string")
+}
