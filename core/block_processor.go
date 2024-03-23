@@ -51,7 +51,7 @@ type BlockProcessor struct {
 	mem map[string]*big.Int
 	// Proof of work used for validating
 	Pow pow.PoW
-
+	panarchy *Panarchy
 	events event.Subscription
 
 	eventMux *event.TypeMux
@@ -216,6 +216,13 @@ func (sm *BlockProcessor) processWithParent(block, parent *types.Block) (logs st
 		return nil, nil, ValidationError("Block can only contain maximum 2 uncles (contained %v)", len(uncles))
 	}
 
+	if block.Validator() != sm.panarchy.getValidator(block, state) {
+		return nil, nil, ValidationError("Not the assigned validator")
+	}
+	err := VerifyRNG(block, state); if err != nil {
+		return nil, nil, err
+	}
+
 	receipts, err = sm.TransitionState(state, parent, block, false)
 	if err != nil {
 		return
@@ -295,6 +302,19 @@ func AccumulateRewards(statedb *state.StateDB, header *types.Header, uncles []*t
 		reward.Add(reward, r)
 	}
 	statedb.AddBalance(header.Coinbase, reward)
+}
+
+func (sm *BlockProcessor) VerifyRNG(block *types.Block, state *state.StateDB) error {
+
+	currentHash := hashOnionFromStorageOrNew(block.Validator(), block.Number(), state)
+
+	preimage := new(big.Int).Xor(block.Random(), parent.Random())
+	hash := crypto.Keccak256Hash(preimage.Bytes())
+	if hash != currentHash {
+		return fmt.Errorf("block rng hash not valid")
+	}
+	writeHashToContract(preimage, block.Validator())
+	return nil
 }
 
 func (sm *BlockProcessor) VerifyUncles(statedb *state.StateDB, block, parent *types.Block) error {
