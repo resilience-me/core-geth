@@ -24,7 +24,7 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'start',
 			call: 'validator_start',
-			params: 1,
+			params: 0,
 			inputFormatter: [null]
 		}),
 		new web3._extend.Method({
