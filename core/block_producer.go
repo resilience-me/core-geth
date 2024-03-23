@@ -525,7 +525,7 @@ func (self *worker) getHashOnionPreimage(currentHash common.Hash) (error, []byte
 		if currentHash == common.BytesToHash(hash) {
 			if i == 0 {
 				self.hashOnionFile.Layers--
-				if err := self.WriteHashOnion(); err != nil {
+				if err := self.writeHashOnion(); err != nil {
 					return nil
 				}
 				self.hashOnion = self.hashOnion[:len(self.hashOnion)-1]
@@ -666,7 +666,7 @@ func (self *worker) loadHashOnion() error {
 	return nil
 }
 
-func (self *worker) WriteHashOnion() error {
+func (self *worker) writeHashOnion() error {
     filePath := self.engine.HashOnionFilePath()
     file, err := os.Create(filePath)
     if err != nil {
