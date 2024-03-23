@@ -89,7 +89,7 @@ func (self *validatorApi) ApiVersion() string {
 }
 
 func (self *validatorApi) StartValidator(req *shared.Request) (interface{}, error) {
-	err := self.ethereum.StartMining()
+	err := self.ethereum.StartValidator()
 	if err == nil {
 		return true, nil
 	}
@@ -98,7 +98,7 @@ func (self *validatorApi) StartValidator(req *shared.Request) (interface{}, erro
 }
 
 func (self *validatorApi) StopValidator(req *shared.Request) (interface{}, error) {
-	self.ethereum.StopMining()
+	self.ethereum.StopValidator()
 	return true, nil
 }
 
@@ -108,7 +108,7 @@ func (self *validatorApi) SetGasPrice(req *shared.Request) (interface{}, error) 
 		return false, err
 	}
 
-	self.ethereum.Miner().SetGasPrice(common.String2Big(args.Price))
+	self.ethereum.Validator().SetGasPrice(common.String2Big(args.Price))
 	return true, nil
 }
 
@@ -126,6 +126,6 @@ func (self *validatorApi) SetHashonionFilepath(req *shared.Request) (interface{}
 	if err := self.codec.Decode(req.Params, &args); err != nil {
 		return false, err
 	}
-	self.ethereum.Miner().SetHashonionFilepath(args.Filepath)
+	self.ethereum.Validator().SetHashonionFilepath(args.Filepath)
 	return nil, nil
 }
