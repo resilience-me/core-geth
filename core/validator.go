@@ -39,7 +39,7 @@ type Validator struct {
 	MinAcceptedGasPrice *big.Int
 
 	coinbase common.Address
-	mining   int32
+	running   int32
 	eth      Backend
 
 	canStart    int32 // can start indicates whether we can start the mining operation
@@ -104,7 +104,7 @@ func (self *Validator) Start(coinbase common.Address) {
 		return
 	}
 
-	atomic.StoreInt32(&self.mining, 1)
+	atomic.StoreInt32(&self.running, 1)
 
 	glog.V(logger.Info).Infof("Starting block producer operation")
 
@@ -113,12 +113,12 @@ func (self *Validator) Start(coinbase common.Address) {
 
 func (self *Validator) Stop() {
 	self.blockProducer.stop()
-	atomic.StoreInt32(&self.mining, 0)
+	atomic.StoreInt32(&self.running, 0)
 	atomic.StoreInt32(&self.shouldStart, 0)
 }
 
 func (self *Validator) Running() bool {
-	return atomic.LoadInt32(&self.mining) > 0
+	return atomic.LoadInt32(&self.running) > 0
 }
 
 func (self *Validator) PendingState() *state.StateDB {
