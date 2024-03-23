@@ -53,7 +53,7 @@ var (
 		"eth_getBalance":                          (*ethApi).GetBalance,
 		"eth_protocolVersion":                     (*ethApi).ProtocolVersion,
 		"eth_coinbase":                            (*ethApi).Coinbase,
-		"eth_mining":                              (*ethApi).IsMining,
+		"eth_validator":                           (*ethApi).IsValidator,
 		"eth_gasPrice":                            (*ethApi).GasPrice,
 		"eth_getStorage":                          (*ethApi).GetStorage,
 		"eth_storageAt":                           (*ethApi).GetStorage,
@@ -89,8 +89,6 @@ var (
 		"eth_getFilterLogs":                       (*ethApi).GetFilterLogs,
 		"eth_getLogs":                             (*ethApi).GetLogs,
 		"eth_hashrate":                            (*ethApi).Hashrate,
-		"eth_getWork":                             (*ethApi).GetWork,
-		"eth_submitWork":                          (*ethApi).SubmitWork,
 		"eth_resend":                              (*ethApi).Resend,
 		"eth_pendingTransactions":                 (*ethApi).PendingTransactions,
 		"eth_getTransactionReceipt":               (*ethApi).GetTransactionReceipt,
@@ -160,8 +158,8 @@ func (self *ethApi) Coinbase(req *shared.Request) (interface{}, error) {
 	return newHexData(self.xeth.Coinbase()), nil
 }
 
-func (self *ethApi) IsMining(req *shared.Request) (interface{}, error) {
-	return self.xeth.IsMining(), nil
+func (self *ethApi) IsValidator(req *shared.Request) (interface{}, error) {
+	return self.xeth.IsValidator(), nil
 }
 
 func (self *ethApi) GasPrice(req *shared.Request) (interface{}, error) {
@@ -557,19 +555,6 @@ func (self *ethApi) GetLogs(req *shared.Request) (interface{}, error) {
 		return nil, shared.NewDecodeParamError(err.Error())
 	}
 	return NewLogsRes(self.xeth.AllLogs(args.Earliest, args.Latest, args.Skip, args.Max, args.Address, args.Topics)), nil
-}
-
-func (self *ethApi) GetWork(req *shared.Request) (interface{}, error) {
-	self.xeth.SetMining(true, 0)
-	return self.xeth.RemoteMining().GetWork(), nil
-}
-
-func (self *ethApi) SubmitWork(req *shared.Request) (interface{}, error) {
-	args := new(SubmitWorkArgs)
-	if err := self.codec.Decode(req.Params, &args); err != nil {
-		return nil, shared.NewDecodeParamError(err.Error())
-	}
-	return self.xeth.RemoteMining().SubmitWork(args.Nonce, common.HexToHash(args.Digest), common.HexToHash(args.Header)), nil
 }
 
 func (self *ethApi) Resend(req *shared.Request) (interface{}, error) {
