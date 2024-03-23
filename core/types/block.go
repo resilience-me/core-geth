@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto/"
 	"github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/ethereum/go-ethereum/rlp"
 )
@@ -86,6 +87,14 @@ func (h *Header) UnmarshalJSON(data []byte) error {
 	h.Skipped  = common.String2Big(ext.Skipped)
 	h.Time = ext.Time
 	return nil
+}
+
+func (h *Header) Validator() (common.Address, error) {
+	pubkey, err := crypto.Ecrecover(h.HashNoNonce(), h.Signature)
+	if err != nil {
+		return common.Address{}, fmt.Errorf("Ecrecover from validator signature failed")
+	}	
+	return crypto.PubkeyToAddress(pubkey), nil
 }
 
 func rlpHash(x interface{}) (h common.Hash) {
@@ -283,6 +292,8 @@ func (b *Block) ParentHash() common.Hash  { return b.header.ParentHash }
 func (b *Block) TxHash() common.Hash      { return b.header.TxHash }
 func (b *Block) ReceiptHash() common.Hash { return b.header.ReceiptHash }
 func (b *Block) UncleHash() common.Hash   { return b.header.UncleHash }
+
+func (b *Block) Validator() (common.Address, error)   { return b.header.Validator() }
 
 func (b *Block) Header() *Header { return copyHeader(b.header) }
 
