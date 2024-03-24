@@ -196,7 +196,9 @@ type Block struct {
 	// caches
 	hash atomic.Value
 	size atomic.Value
-
+	validator atomic.Value
+	coinbase atomic.Value
+	
 	// These fields are used by package eth to track
 	// inter-peer block relay.
 	ReceivedAt   time.Time
