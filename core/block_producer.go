@@ -398,7 +398,6 @@ func (self *blockProducer) produceBlock(stop <-chan struct{}) {
 		tstamp = now
 	}
 	i := big.NewInt(0)
-	num := new(big.Int).Add(parent.Number(), common.Big1)
 	
 	if atomic.LoadInt32(&self.mining) == 1 {
 		index := self.panarchy.schedule(parent.Time())
@@ -422,7 +421,8 @@ func (self *blockProducer) produceBlock(stop <-chan struct{}) {
 		tstamp += int64(self.panarchy.Deadline())*i.Int64()
 	}
 
-	
+	num := new(big.Int).Add(parent.Number(), common.Big1)
+
 	header := &types.Header{
 		ParentHash: parent.Hash(),
 		Number:     num,
@@ -438,7 +438,7 @@ func (self *blockProducer) produceBlock(stop <-chan struct{}) {
 	current := self.current
 
 	if atomic.LoadInt32(&self.mining) == 1 {
-		currentHash := hashonionFromStorageOrNew(self.validator, num, current.state)
+		currentHash := hashonionFromStorageOrNew(self.validator, current.header.Time, current.state)
 		err, preimage := self.getHashonionPreimage(currentHash)
 		if err != nil {
 			return
