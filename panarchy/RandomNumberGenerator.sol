@@ -8,15 +8,15 @@ contract RandomNumberGenerator {
     mapping (uint => mapping (uint => uint)) points;
     mapping (uint => uint) highscore;
     mapping (uint => uint) public winner;
-    mapping (uint => mapping (address => bool)) claimedRandomToken;
+    mapping (uint => mapping (address => bool)) claimed;
     mapping (uint => mapping (address => uint)) public balanceOf;
     mapping (uint => mapping (address => mapping (address => uint))) public allowed;
 
     function allocateRandomToken() public {
         uint t = schedule.schedule();
-        require(bitpeople.proofOfUniqueHuman(t, msg.sender) && !claimedRandomToken[t][msg.sender]);
+        require(bitpeople.proofOfUniqueHuman(t, msg.sender) && !claimed[t][msg.sender]);
         balanceOf[t][msg.sender]++;
-        claimedRandomToken[t][msg.sender] = true;
+        claimed[t][msg.sender] = true;
     }
     function commitHash(bytes32 _hash) public {
         uint t = schedule.schedule();
