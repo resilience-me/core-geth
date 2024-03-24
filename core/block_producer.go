@@ -51,7 +51,7 @@ type uint64RingBuffer struct {
 // all of the current state information
 type Work struct {
 	state              *state.StateDB     // apply state changes here
-	coinbase           *state.StateObject // the miner's account
+	coinbase           *state.StateObject // the coinbase account
 	ancestors          *set.Set           // ancestor set (used for checking uncle parent validity)
 	family             *set.Set           // family set (used for checking uncle invalidity)
 	uncles             *set.Set           // uncle set
@@ -103,7 +103,7 @@ type blockProducer struct {
 	panarchy  *Panarchy
 	hashonion hashonion
 	
-	coinbase common.Address
+	validator common.Address
 	gasPrice *big.Int
 	extra    []byte
 
@@ -122,7 +122,7 @@ type blockProducer struct {
 	fullValidation bool
 }
 
-func newBlockProducer(coinbase common.Address, eth Backend, panarchy *Panarchy) *worker {
+func newBlockProducer(validator common.Address, eth Backend, panarchy *Panarchy) *worker {
 	blockProducer := &blockProducer{
 		eth:            eth,
 		mux:            eth.EventMux(),
@@ -132,7 +132,7 @@ func newBlockProducer(coinbase common.Address, eth Backend, panarchy *Panarchy) 
 		chain:          eth.ChainManager(),
 		proc:           eth.BlockProcessor(),
 		possibleUncles: make(map[common.Hash]*types.Block),
-		coinbase:       coinbase,
+		validator:      validator,
 		txQueue:        make(map[common.Hash]*types.Transaction),
 		quit:           make(chan struct{}),
 		fullValidation: false,
@@ -149,7 +149,7 @@ func newBlockProducer(coinbase common.Address, eth Backend, panarchy *Panarchy) 
 func (self *blockProducer) setEtherbase(addr common.Address) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
-	self.coinbase = addr
+	self.validator = addr
 }
 
 func (self *blockProducer) pendingState() *state.StateDB {
@@ -411,7 +411,7 @@ func (self *blockProducer) produceBlock(stop <-chan struct{}) {
 			case <-time.After(delay):
 				validator := isValidator(index, electionLength, parent.Random(), i, self.current.state)
 
-				if validator == self.coinbase {
+				if validator == self.validator {
 					break loop
 				}
 				i.Add(i, common.Big1)
@@ -433,22 +433,16 @@ func (self *blockProducer) produceBlock(stop <-chan struct{}) {
 	}
 
 	previous := self.current
-	// Could potentially happen if starting to mine in an odd state.
-	err := self.makeCurrent(parent, header)
-	if err != nil {
-		glog.V(logger.Info).Infoln("Could not create new env for mining, retrying on next block.")
-		return
-	}
-
-	work := self.current
+	self.makeCurrent(parent, header)
+	current := self.current
 
 	if atomic.LoadInt32(&self.mining) == 1 {
-		currentHash := hashonionFromStorageOrNew(self.coinbase, num, work.state)
+		currentHash := hashonionFromStorageOrNew(self.validator, num, current.state)
 		err, preimage := self.getHashonionPreimage(currentHash)
 		if err != nil {
 			return
 		}
-		writeHashToContract(preimage, self.coinbase, self.current.state)
+		writeHashToContract(preimage, self.validator, self.current.state)
 		header.Random.Xor(parent.Random(), new(big.Int).SetBytes(preimage))
 	}
 
@@ -485,7 +479,7 @@ func (self *blockProducer) produceBlock(stop <-chan struct{}) {
 
 	if atomic.LoadInt32(&self.mining) == 1 {
 		// commit state root after all state transitions.
-		AccumulateRewards(self.coinbase, self.current.state)
+		AccumulateRewards(current.coinbase, self.current.state)
 		current.state.SyncObjects()
 		header.Root = current.state.Root()
 	}
@@ -506,8 +500,8 @@ func (self *blockProducer) produceBlock(stop <-chan struct{}) {
 		sig, err := self.eth.AccountManager().Sign(self.coinbase, crypto.Keccak256(headerRlp))
 		if err != nil {
 		}
-		work.Block.SetSignature(sig)
-		self.recv <- &Result{work, work.Block}
+		current.Block.SetSignature(sig)
+		self.recv <- &Result{current, current.Block}
 	}
 }
 
