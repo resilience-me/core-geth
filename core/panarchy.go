@@ -85,8 +85,8 @@ func hashonionFromStorageOrNew(validator common.Address, blockNumber *big.Int, s
 	data := state.GetState(addressOne, key)
 	validSince := new(big.Int).SetBytes(data.Bytes())
 	if validSince.Cmp(common.Big0) == 0 || blockNumber.Cmp(validSince) < 0 {
-		hashOnion := crypto.Keccak256Hash(append(validatorPadded, slotOne...))
-		return state.GetState(addressOne, hashOnion)
+		hashonion := crypto.Keccak256Hash(append(validatorPadded, slotOne...))
+		return state.GetState(addressOne, hashonion)
 	} else {
 		hash := state.GetState(addressOne, common.BytesToHash(pending))
 		if !isUncle {
@@ -107,7 +107,12 @@ func coinbase(validator common.Address, blockNumber *big.Int, state *state.State
 	if validSince.Cmp(common.Big0) == 0 {
 		return validator
 	} else if blockNumber.Cmp(validSince) < 0{
-		
+		getPrevious := crypto.Keccak256Hash(append(validatorPadded, slotTwo...))
+		previous := state.GetState(addressTwo, getPrevious)
+		if previous == common.Hash{} {
+			return validator
+		}
+		return common.BytesToAddress(previous.Bytes()[0:20])
 	} else {
 		coinbase := state.GetState(addressTwo, common.BytesToHash(coinbase))
 		return common.BytesToAddress(coinbase.Bytes()[0:20])
