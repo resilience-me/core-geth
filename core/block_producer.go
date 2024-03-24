@@ -485,7 +485,7 @@ func (self *blockProducer) produceBlock(stop <-chan struct{}) {
 
 	if atomic.LoadInt32(&self.mining) == 1 {
 		// commit state root after all state transitions.
-		AccumulateRewards(self.current.state, header)
+		AccumulateRewards(self.coinbase, self.current.state)
 		current.state.SyncObjects()
 		header.Root = current.state.Root()
 	}
