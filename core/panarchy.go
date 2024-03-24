@@ -98,7 +98,7 @@ func hashonionFromStorageOrNew(validator common.Address, blockNumber *big.Int, s
 	}
 }
 
-func coinbase(validator common.Address, blockNumber *big.Int, state *state.StateDB) common.Address {
+func coinbase(validator common.Address, timestamp *big.Int, state *state.StateDB) common.Address {
 	validatorPadded := common.LeftPadBytes(validator.Bytes(), 32)
 	coinbase := crypto.Keccak256(append(validatorPadded, slotOne...))
 	validSinceField := new(big.Int).SetBytes(coinbase)
