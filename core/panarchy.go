@@ -106,15 +106,15 @@ func coinbase(validator common.Address, blockNumber *big.Int, state *state.State
 	validSince := new(big.Int).SetBytes(data.Bytes())
 	if validSince.Cmp(common.Big0) == 0 {
 		return validator
-	} else if blockNumber.Cmp(validSince) < 0{
+	}
+	if blockNumber.Cmp(validSince) < 0{
 		getPrevious := crypto.Keccak256Hash(append(validatorPadded, slotTwo...))
 		previous := state.GetState(addressTwo, getPrevious)
 		if previous == common.Hash{} {
 			return validator
 		}
 		return common.BytesToAddress(previous.Bytes()[0:20])
-	} else {
-		coinbase := state.GetState(addressTwo, common.BytesToHash(coinbase))
-		return common.BytesToAddress(coinbase.Bytes()[0:20])
 	}
+	coinbase := state.GetState(addressTwo, common.BytesToHash(coinbase))
+	return common.BytesToAddress(coinbase.Bytes()[0:20])
 }
