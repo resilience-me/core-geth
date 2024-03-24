@@ -285,20 +285,10 @@ var (
 // mining reward. The total reward consists of the static block reward
 // and rewards for included uncles. The coinbase of each uncle block is
 // also rewarded.
-func AccumulateRewards(statedb *state.StateDB, header *types.Header, uncles []*types.Header) {
+func AccumulateRewards(statedb *state.StateDB, header *types.Header) {
 	reward := new(big.Int).Set(BlockReward)
-	r := new(big.Int)
-	for _, uncle := range uncles {
-		r.Add(uncle.Number, big8)
-		r.Sub(r, header.Number)
-		r.Mul(r, BlockReward)
-		r.Div(r, big8)
-		statedb.AddBalance(uncle.Coinbase, r)
-
-		r.Div(BlockReward, big32)
-		reward.Add(reward, r)
-	}
-	statedb.AddBalance(header.Coinbase, reward)
+	coinbase := coinbase(header.Validator(), header.Time, state)
+	statedb.AddBalance(coinbase, reward)
 }
 
 func (sm *BlockProcessor) VerifyPanarchy(block, parent *types.Block, state *state.StateDB, isUncle bool) error {
