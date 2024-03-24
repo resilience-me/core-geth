@@ -70,7 +70,8 @@ func NewBlockProcessor(db, extra common.Database, pow pow.PoW, chainManager *Cha
 	return sm
 }
 
-func (sm *BlockProcessor) TransitionState(coinbase *state.StateObject, statedb *state.StateDB, parent, block *types.Block, transientProcess bool) (receipts types.Receipts, err error) {
+func (sm *BlockProcessor) TransitionState(statedb *state.StateDB, parent, block *types.Block, transientProcess bool) (receipts types.Receipts, err error) {
+	coinbase := statedb.GetOrNewStateObject(block.Coinbase())
 	coinbase.SetGasLimit(block.GasLimit())
 
 	// Process the transactions on to parent state
@@ -221,7 +222,7 @@ func (sm *BlockProcessor) processWithParent(block, parent *types.Block) (logs st
 	}
 	coinbase := coinbase(validator, block.Time(), state)
 
-	receipts, err = sm.TransitionState(state.GetOrNewStateObject(coinbase), state, parent, block, false)
+	receipts, err = sm.TransitionState(state, parent, block, false)
 	if err != nil {
 		return
 	}
@@ -367,7 +368,7 @@ func (sm *BlockProcessor) GetBlockReceipts(bhash common.Hash) types.Receipts {
 // GetLogs returns the logs of the given block. This method is using a two step approach
 // where it tries to get it from the (updated) method which gets them from the receipts or
 // the depricated way by re-processing the block.
-func (sm *BlockProcessor) GetLogs(coinbase *state.StateObject, block *types.Block) (logs state.Logs, err error) {
+func (sm *BlockProcessor) GetLogs(block *types.Block) (logs state.Logs, err error) {
 	receipts := GetBlockReceipts(sm.extraDb, block.Hash())
 	if len(receipts) > 0 {
 		// coalesce logs
@@ -383,7 +384,7 @@ func (sm *BlockProcessor) GetLogs(coinbase *state.StateObject, block *types.Bloc
 		state  = state.New(parent.Root(), sm.db)
 	)
 
-	sm.TransitionState(coinbase, state, parent, block, true)
+	sm.TransitionState(state, parent, block, true)
 
 	return state.Logs(), nil
 }
