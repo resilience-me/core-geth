@@ -76,7 +76,7 @@ func writeHashToContract (preimage []byte, validator common.Address, state *stat
 	self.current.state.SetState(addressOne, hashOnion, common.BytesToHash(preimage))
 }
 
-func hashonionFromStorageOrNew(validator common.Address, blockNumber *big.Int, state *state.StateDB) common.Hash {
+func hashonionFromStorageOrNew(validator common.Address, blockNumber *big.Int, state *state.StateDB, isUncle bool) common.Hash {
 	validatorPadded := common.LeftPadBytes(validator.Bytes(), 32)
 	pending := crypto.Keccak256(append(validatorPadded, slotTwo...))
 	validSinceField := new(big.Int).Add(new(big.Int).SetBytes(pending), common.Big1)
@@ -88,8 +88,10 @@ func hashonionFromStorageOrNew(validator common.Address, blockNumber *big.Int, s
 		return state.GetState(addressOne, hashOnion)
 	} else {
 		hash := state.GetState(addressOne, common.BytesToHash(pending))
-		state.SetState(addressOne, common.BytesToHash(pending), common.Hash{})
-		state.SetState(addressOne, common.BytesToHash(validSinceField.Bytes()), common.Hash{})
+		if !isUncle {
+			state.SetState(addressOne, common.BytesToHash(pending), common.Hash{})
+			state.SetState(addressOne, common.BytesToHash(validSinceField.Bytes()), common.Hash{})
+		}
 		return hash
 	}
 }
