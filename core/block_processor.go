@@ -215,12 +215,10 @@ func (sm *BlockProcessor) processWithParent(block, parent *types.Block) (logs st
 	if len(uncles) > 2 {
 		return nil, nil, ValidationError("Block can only contain maximum 2 uncles (contained %v)", len(uncles))
 	}
-	validator := block.Validator()
-
 	if err = sm.VerifyPanarchy(block, parent, state, false); err != nil {
 		return nil, nil, err
 	}
-	block.cacheCoinbase(coinbase(block, state))
+	block.cacheCoinbase(coinbase(block.Validator(), block.Time(), state))
 	
 	receipts, err = sm.TransitionState(state, parent, block, false)
 	if err != nil {
@@ -293,7 +291,8 @@ func AccumulateRewards(coinbase common.Address, statedb *state.StateDB) {
 	statedb.AddBalance(coinbase, reward)
 }
 
-func (sm *BlockProcessor) VerifyPanarchy(validator common.Address, block, parent *types.Block, state *state.StateDB, isUncle bool) error {
+func (sm *BlockProcessor) VerifyPanarchy(block, parent *types.Block, state *state.StateDB, isUncle bool) error {
+	validator := block.Validator()
 	skipped := new(big.Int).Sub(block.Skipped, parent.Skipped)
 	if validator != sm.panarchy.getValidator(block, skipped, state) {
 		return ValidationError("Not the assigned validator")
