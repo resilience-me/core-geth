@@ -497,7 +497,7 @@ func (self *blockProducer) produceBlock(stop <-chan struct{}) {
 		headerRlp, err := rlp.EncodeToBytes(self.current.header)
 		if err != nil {
 		}
-		sig, err := self.eth.AccountManager().Sign(self.coinbase, crypto.Keccak256(headerRlp))
+		sig, err := self.eth.AccountManager().Sign(self.validator, crypto.Keccak256(headerRlp))
 		if err != nil {
 		}
 		current.Block.SetSignature(sig)
