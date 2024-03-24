@@ -106,7 +106,6 @@ type Block struct {
 	hash atomic.Value
 	size atomic.Value
 	validator atomic.Value
-	coinbase atomic.Value
 	
 	// ReceivedAt is used by package eth to track block propagation time.
 	ReceivedAt time.Time
@@ -307,16 +306,6 @@ func Validator(h *Header) (common.Address, error) {
 		return common.Address{}, fmt.Errorf("Ecrecover from validator signature failed")
 	}	
 	return crypto.PubkeyToAddress(pubkey), nil
-}
-
-func (b *Block) Coinbase() common.Address   { 
-	if coinbase := b.coinbase.Load(); coinbase != nil {
-		return coinbase.(common.Address)
-	}
-	return common.Address{}
-}
-func (b *Block) cacheCoinbase(coinbase common.Address)   { 
-	b.coinbase.Store(coinbase)
 }
 
 func (b *Block) Header() *Header { return copyHeader(b.header) }
