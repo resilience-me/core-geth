@@ -80,7 +80,8 @@ func writeHashToContract (preimage []byte, validator common.Address, state *stat
 func hashonionFromStorageOrNew(validator common.Address, blockNumber *big.Int, state *state.StateDB, isUncle bool) common.Hash {
 	validatorPadded := common.LeftPadBytes(validator.Bytes(), 32)
 	pending := crypto.Keccak256(append(validatorPadded, slotTwo...))
-	validSinceField := new(big.Int).Add(new(big.Int).SetBytes(pending), common.Big1)
+	validSinceField := new(big.Int).SetBytes(coinbase)
+	validSinceField.Add(validSinceField, common.Big1)
 	key := common.BytesToHash(validSinceField.Bytes())
 	data := state.GetState(addressOne, key)
 	validSince := new(big.Int).SetBytes(data.Bytes())
@@ -100,7 +101,8 @@ func hashonionFromStorageOrNew(validator common.Address, blockNumber *big.Int, s
 func coinbase(validator common.Address, blockNumber *big.Int, state *state.StateDB) common.Address {
 	validatorPadded := common.LeftPadBytes(validator.Bytes(), 32)
 	coinbase := crypto.Keccak256(append(validatorPadded, slotOne...))
-	validSinceField := new(big.Int).Add(new(big.Int).SetBytes(coinbase), common.Big1)
+	validSinceField := new(big.Int).SetBytes(coinbase)
+	validSinceField.Add(validSinceField, common.Big1)
 	key := common.BytesToHash(validSinceField.Bytes())
 	data := state.GetState(addressTwo, key)
 	validSince := new(big.Int).SetBytes(data.Bytes())
