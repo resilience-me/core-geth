@@ -7,14 +7,8 @@ contract RandomNumberGenerator {
     mapping (uint => uint) votes;
 
     mapping (uint => mapping (uint => uint)) public points;
-    mapping (uint => uint[]) public leaderboard;
-    mapping (uint => mapping (uint => uint)) public leaderboardIndex;
-
-    struct Score {
-        uint start;
-        uint end;
-    }
-    mapping (uint => mapping (uint => Score)) public segments;
+    mapping(uint => uint) highscore;
+    mapping(uint => uint) winner;
 
     mapping (uint => mapping (address => bool)) randomToken;
 
@@ -47,31 +41,10 @@ contract RandomNumberGenerator {
         delete commit[t][msg.sender];
     }
     function vote(uint _id, uint _t) internal {
-
-        uint score = points[_t][_id];
-
-        if(score == 0) {
-            leaderboard[_t].push(_id);
-            leaderboardIndex[_t][_id] = leaderboard[_t].length;
-            if(segments[_t][1].end == 0) segments[_t][1].end = leaderboard[_t].length;
-            segments[_t][1].start = leaderboard[_t].length;
-        }
-        else {
-            uint index = leaderboardIndex[_t][_id];
-            uint nextSegment = segments[_t][score].end;
-            if(nextSegment != index) {
-                leaderboardIndex[_t][_id] = nextSegment;
-                leaderboardIndex[_t][leaderboard[_t][nextSegment-1]] = index;
-                (leaderboard[_t][nextSegment - 1], leaderboard[_t][index - 1]) = (leaderboard[_t][index - 1], leaderboard[_t][nextSegment - 1]);
-            }
-            if(segments[_t][score].start == nextSegment) { 
-                delete segments[_t][score].start; 
-                delete segments[_t][score].end; 
-            }
-            else segments[_t][score].end++;
-            if(segments[_t][score+1].end == 0) segments[_t][score+1].end = nextSegment;
-            segments[_t][score+1].start = nextSegment;
-        }
         points[_t][_id]++;
+        if (points[_t][_id] > highscore[_t]) {
+            highscore[_t]++;
+            winner[_t] = _id;
+        }
     }
 }
