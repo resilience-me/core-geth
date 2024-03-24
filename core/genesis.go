@@ -40,14 +40,8 @@ func WriteGenesisBlock(stateDb, blockDb common.Database, reader io.Reader) (*typ
 	}
 
 	var genesis struct {
-		Nonce      string
 		Timestamp  string
-		ParentHash string
-		ExtraData  string
 		GasLimit   string
-		Difficulty string
-		Mixhash    string
-		Coinbase   string
 		Alloc      map[string]struct {
 			Code    string
 			Storage map[string]string
