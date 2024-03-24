@@ -89,14 +89,6 @@ func (h *Header) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (h *Header) Validator() (common.Address, error) {
-	pubkey, err := crypto.Ecrecover(h.HashNoNonce(), h.Signature)
-	if err != nil {
-		return common.Address{}, fmt.Errorf("Ecrecover from validator signature failed")
-	}	
-	return crypto.PubkeyToAddress(pubkey), nil
-}
-
 func rlpHash(x interface{}) (h common.Hash) {
 	hw := sha3.NewKeccak256()
 	rlp.Encode(hw, x)
@@ -295,7 +287,22 @@ func (b *Block) TxHash() common.Hash      { return b.header.TxHash }
 func (b *Block) ReceiptHash() common.Hash { return b.header.ReceiptHash }
 func (b *Block) UncleHash() common.Hash   { return b.header.UncleHash }
 
-func (b *Block) Validator() (common.Address, error)   { return b.header.Validator() }
+func (b *Block) Validator() (common.Address, error)   {
+	if validator := b.validator.Load(); validator != nil {
+		return validator.(common.Address)
+	}
+	v := Ecrecover()
+	b.validator.Store(v)
+	return v
+}
+
+func (h *Header) Validator() (common.Address, error) {
+	pubkey, err := crypto.Ecrecover(h.HashNoNonce(), h.Signature)
+	if err != nil {
+		return common.Address{}, fmt.Errorf("Ecrecover from validator signature failed")
+	}	
+	return crypto.PubkeyToAddress(pubkey), nil
+}
 
 func (b *Block) Header() *Header { return copyHeader(b.header) }
 
