@@ -29,13 +29,14 @@ contract RandomNumberGenerator {
     function revealHash(bytes32 _preimage) public {
         uint t = schedule.schedule();
         uint start = schedule.toSeconds(t)+schedule.period()/2;
-        require(block.timestamp >= start && keccak256(abi.encode(_preimage)) == commit[t][msg.sender]);
-        uint id = uint(_preimage)%votes[t];
+        require(block.timestamp >= start && keccak256(abi.encode(_preimage)) == commit[t-1][msg.sender]);
+        bytes32 mutated = keccak256(abi.encode(_preimage, winner[t-1]));
+        uint id = uint(mutated)%votes[t];
         points[_t][_id]++;
         if (points[_t][_id] > highscore[_t]) {
             highscore[_t]++;
             winner[_t] = _id;
         }
-        delete commit[t][msg.sender];
+        delete commit[t-1][msg.sender];
     }
 }
