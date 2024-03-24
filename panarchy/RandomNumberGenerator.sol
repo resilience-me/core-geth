@@ -38,7 +38,4 @@ contract RandomNumberGenerator {
         }
         delete commit[t][msg.sender];
     }
-    function vote(uint _id, uint _t) internal {
-
-    }
 }
