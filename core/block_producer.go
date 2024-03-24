@@ -299,13 +299,14 @@ func (self *blockProducer) wait() {
 // makeCurrent creates a new environment for the current cycle.
 func (self *blockProducer) makeCurrent(parent *types.Block, header *types.Header) {
 	state := state.New(parent.Root(), self.eth.StateDb())
+	coinbase := coinbase(self.validator, header.Time, state)
 	current := &Work{
 		state:     state,
 		ancestors: set.New(),
 		family:    set.New(),
 		uncles:    set.New(),
 		header:    header,
-		coinbase:  state.GetOrNewStateObject(self.coinbase),
+		coinbase:  state.GetOrNewStateObject(coinbase),
 		createdAt: time.Now(),
 	}
 
