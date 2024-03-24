@@ -66,14 +66,10 @@ func WriteGenesisBlock(stateDb, blockDb common.Database, reader io.Reader) (*typ
 
 	difficulty := common.String2Big(genesis.Difficulty)
 	block := types.NewBlock(&types.Header{
-		Nonce:      types.EncodeNonce(common.String2Big(genesis.Nonce).Uint64()),
 		Time:       common.String2Big(genesis.Timestamp).Uint64(),
 		ParentHash: common.HexToHash(genesis.ParentHash),
-		Extra:      common.FromHex(genesis.ExtraData),
 		GasLimit:   common.String2Big(genesis.GasLimit),
-		Difficulty: difficulty,
-		MixDigest:  common.HexToHash(genesis.Mixhash),
-		Coinbase:   common.HexToAddress(genesis.Coinbase),
+		Skipped:    new(big.Int).Set(common.Big0),
 		Root:       statedb.Root(),
 	}, nil, nil, nil)
 	block.Td = difficulty
