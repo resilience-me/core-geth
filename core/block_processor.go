@@ -260,7 +260,7 @@ func (sm *BlockProcessor) processWithParent(block, parent *types.Block) (logs st
 		return
 	}
 	// Accumulate static rewards; block reward, uncle's and uncle inclusion.
-	AccumulateRewards(state, header, uncles)
+	AccumulateRewards(state, header)
 
 	// Commit state objects/accounts to a temporary trie (does not save)
 	// used to calculate the state root.
