@@ -34,10 +34,7 @@ type Environment interface {
 	GetHash(n uint64) common.Hash
 	Coinbase() common.Address
 	Time() uint64
-	
-	Difficulty() *big.Int
 	Random() *big.Int
-	
 	GasLimit() *big.Int
 	Transfer(from, to Account, amount *big.Int) error
 	AddLog(*state.Log)
