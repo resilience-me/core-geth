@@ -288,20 +288,33 @@ func (b *Block) ReceiptHash() common.Hash { return b.header.ReceiptHash }
 func (b *Block) UncleHash() common.Hash   { return b.header.UncleHash }
 
 func (b *Block) Validator() (common.Address, error)   {
-	if validator := b.validator.Load(); validator != nil {
-		return validator.(common.Address)
+	if cached := b.validator.Load(); cached != nil {
+		return cached.(common.Address)
 	}
-	v := Ecrecover()
-	b.validator.Store(v)
-	return v
+	validator, err := Validator(b.header)
+	if err != nil {
+		return common.Address{}, err
+	}
+	b.validator.Store(validator)
+	return validator, nil
 }
 
-func (h *Header) Validator() (common.Address, error) {
+func Validator(h *Header) (common.Address, error) {
 	pubkey, err := crypto.Ecrecover(h.HashNoNonce(), h.Signature)
 	if err != nil {
 		return common.Address{}, fmt.Errorf("Ecrecover from validator signature failed")
 	}	
 	return crypto.PubkeyToAddress(pubkey), nil
+}
+
+func (b *Block) Coinbase() common.Address   { 
+	if coinbase := b.coinbase.Load(); coinbase != nil {
+		return coinbase.(common.Address)
+	}
+	return common.Address{}
+}
+func (b *Block) cacheCoinbase(coinbase common.Address)   { 
+	b.coinbase.Store(coinbase)
 }
 
 func (b *Block) Header() *Header { return copyHeader(b.header) }
