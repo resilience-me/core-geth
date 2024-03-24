@@ -49,9 +49,8 @@ func New() *Panarchy {
 	}
 }
 
-func (p *Panarchy) schedule(timestamp *big.Int) []byte {
-	schedule := new(big.Int).Div(new(big.Int).Sub(timestamp, p.schedule.genesis), p.schedule.period)
-	index := common.LeftPadBytes(schedule.Bytes(), 32)
+func (p *Panarchy) schedule(timestamp *big.Int) *big.Int {
+	return new(big.Int).Div(new(big.Int).Sub(timestamp, p.schedule.genesis), p.schedule.period)
 }
 func electionLength(index []byte, state *state.StateDB) *big.Int {
 	lengthKey := crypto.Keccak256Hash(append(index, slotTwo...))
@@ -66,7 +65,8 @@ func isValidator(index []byte, electionLength *big.Int, random *big.Int, skipped
 	return state.GetState(addressThree, common.BytesToHash(key.Bytes()))
 }
 func (p *Panarchy) getValidator(block *types.Block, skipped *big.Int, state *state.StateDB) common.Address {
-	index := p.schedule(block.Time())
+	schedule := p.schedule(block.Time())
+	index := common.LeftPadBytes(schedule.Bytes(), 32)
 	electionLength := electionLength(index, state)
 	return isValidator(index, electionLength, block.Random(), skipped, state)
 }
@@ -77,7 +77,7 @@ func writeHashToContract (preimage []byte, validator common.Address, state *stat
 	self.current.state.SetState(addressOne, hashOnion, common.BytesToHash(preimage))
 }
 
-func hashonionFromStorageOrNew(validator common.Address, blockNumber *big.Int, state *state.StateDB, isUncle bool) common.Hash {
+func hashonionFromStorageOrNew(validator common.Address, timestamp *big.Int, state *state.StateDB, isUncle bool) common.Hash {
 	validatorPadded := common.LeftPadBytes(validator.Bytes(), 32)
 	pending := crypto.Keccak256(append(validatorPadded, slotTwo...))
 	validSinceField := new(big.Int).SetBytes(coinbase)
@@ -85,7 +85,8 @@ func hashonionFromStorageOrNew(validator common.Address, blockNumber *big.Int, s
 	key := common.BytesToHash(validSinceField.Bytes())
 	data := state.GetState(addressOne, key)
 	validSince := new(big.Int).SetBytes(data.Bytes())
-	if validSince.Cmp(common.Big0) == 0 || blockNumber.Cmp(validSince) < 0 {
+
+	if validSince.Cmp(common.Big0) == 0 || p.schedule(timestamp).Cmp(validSince) < 0 {
 		hashonion := crypto.Keccak256Hash(append(validatorPadded, slotOne...))
 		return state.GetState(addressOne, hashonion)
 	} else {
@@ -98,7 +99,7 @@ func hashonionFromStorageOrNew(validator common.Address, blockNumber *big.Int, s
 	}
 }
 
-func coinbase(validator common.Address, timestamp *big.Int, state *state.StateDB) common.Address {
+func (p *Panarchy) coinbase(validator common.Address, timestamp *big.Int, state *state.StateDB) common.Address {
 	validatorPadded := common.LeftPadBytes(validator.Bytes(), 32)
 	coinbase := crypto.Keccak256(append(validatorPadded, slotOne...))
 	validSinceField := new(big.Int).SetBytes(coinbase)
@@ -109,7 +110,8 @@ func coinbase(validator common.Address, timestamp *big.Int, state *state.StateDB
 	if validSince.Cmp(common.Big0) == 0 {
 		return validator
 	}
-	if blockNumber.Cmp(validSince) < 0{
+	
+	if p.schedule(timestamp).Cmp(validSince) < 0 {
 		getPrevious := crypto.Keccak256Hash(append(validatorPadded, slotTwo...))
 		previous := state.GetState(addressTwo, getPrevious)
 		if previous == common.Hash{} {
