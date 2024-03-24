@@ -15,7 +15,7 @@ contract RandomNumberGenerator {
     mapping (uint => mapping (address => uint)) public balanceOf;
     mapping (uint => mapping (address => mapping (address => uint))) public allowed;
 
-    function allocateSuffrageToken() public {
+    function allocateRandomToken() public {
         uint t = schedule.schedule();
         require(bitpeople.proofOfUniqueHuman(t, msg.sender));
         require(!randomToken[t][msg.sender]);
