@@ -113,7 +113,9 @@ type Block struct {
 	// caches
 	hash atomic.Value
 	size atomic.Value
-
+	validator atomic.Value
+	coinbase atomic.Value
+	
 	// ReceivedAt is used by package eth to track block propagation time.
 	ReceivedAt time.Time
 }
