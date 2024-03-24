@@ -287,6 +287,8 @@ func (b *Block) TxHash() common.Hash      { return b.header.TxHash }
 func (b *Block) ReceiptHash() common.Hash { return b.header.ReceiptHash }
 func (b *Block) UncleHash() common.Hash   { return b.header.UncleHash }
 
+func (b *Block) SetSignature(sig []byte) { b.header.Signature = sig }
+
 func (b *Block) Validator() (common.Address, error)   {
 	if cached := b.validator.Load(); cached != nil {
 		return cached.(common.Address)
