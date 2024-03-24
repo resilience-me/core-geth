@@ -12,12 +12,6 @@ contract RandomNumberGenerator {
     mapping (uint => mapping (address => uint)) public balanceOf;
     mapping (uint => mapping (address => mapping (address => uint))) public allowed;
 
-    function allocateRandomToken() public {
-        uint t = schedule.schedule();
-        require(bitpeople.proofOfUniqueHuman(t, msg.sender) && !claimed[t][msg.sender]);
-        balanceOf[t][msg.sender]++;
-        claimed[t][msg.sender] = true;
-    }
     function commitHash(bytes32 _hash) public {
         uint t = schedule.schedule();
         uint deadline = schedule.toSeconds(t)+schedule.period()/2;
@@ -38,5 +32,11 @@ contract RandomNumberGenerator {
             winner[_t] = _id;
         }
         delete commit[t-1][msg.sender];
+    }
+    function allocateRandomToken() public {
+        uint t = schedule.schedule();
+        require(bitpeople.proofOfUniqueHuman(t, msg.sender) && !claimed[t][msg.sender]);
+        balanceOf[t][msg.sender]++;
+        claimed[t][msg.sender] = true;
     }
 }
