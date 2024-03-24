@@ -357,9 +357,9 @@ func (self *blockProducer) isBlockLocallyMined(deepBlockNum uint64) bool {
 		return false
 	}
 
-	//Does the block at {deepBlockNum} send earnings to my coinbase?
+	//Was the block at {deepBlockNum} mined by validator?
 	var block = self.chain.GetBlockByNumber(deepBlockNum)
-	return block != nil && block.Coinbase() == self.coinbase
+	return block != nil && block.Validator() == self.validator
 }
 
 func (self *blockProducer) logLocalMinedBlocks(previous *Work) {
