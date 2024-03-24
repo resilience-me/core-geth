@@ -285,9 +285,8 @@ var (
 // mining reward. The total reward consists of the static block reward
 // and rewards for included uncles. The coinbase of each uncle block is
 // also rewarded.
-func AccumulateRewards(statedb *state.StateDB, header *types.Header) {
+func AccumulateRewards(coinbase common.Address, statedb *state.StateDB) {
 	reward := new(big.Int).Set(BlockReward)
-	coinbase := coinbase(header.Validator(), header.Time, state)
 	statedb.AddBalance(coinbase, reward)
 }
 
