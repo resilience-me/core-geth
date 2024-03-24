@@ -467,11 +467,6 @@ func (self *Vm) Run(context *Context, input []byte) (ret []byte, err error) {
 			number := self.env.BlockNumber()
 
 			stack.push(U256(number))
-
-		case DIFFICULTY:
-			difficulty := self.env.Difficulty()
-
-			stack.push(difficulty)
 			
 		case RANDOM:
 			random := self.env.Random()
