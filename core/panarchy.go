@@ -110,6 +110,6 @@ func coinbase(validator common.Address, blockNumber *big.Int, state *state.State
 		
 	} else {
 		coinbase := state.GetState(addressTwo, common.BytesToHash(coinbase))
+		return common.BytesToAddress(coinbase.Bytes()[0:20])
 	}
-	
 }
