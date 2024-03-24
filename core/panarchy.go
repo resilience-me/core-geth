@@ -14,6 +14,7 @@ var (
     slotTwo 		= []byte{31: 2}
     addressOne		= common.Address{19: 1}
     addressTwo		= common.Address{19: 2}
+    addressThree	= common.Address{19: 3}
 )
 
 const (
@@ -54,7 +55,7 @@ func (p *Panarchy) schedule(timestamp *big.Int) []byte {
 }
 func electionLength(index []byte, state *state.StateDB) *big.Int {
 	lengthKey := crypto.Keccak256Hash(append(index, slotTwo...))
-	electionLength := state.GetState(addressTwo, lengthKey)
+	electionLength := state.GetState(addressThree, lengthKey)
 	return new(big.Int).SetBytes(electionLength.Bytes())	
 }
 func isValidator(index []byte, electionLength *big.Int, random *big.Int, skipped *big.Int, state *state.StateDB) common.Address {
@@ -62,7 +63,7 @@ func isValidator(index []byte, electionLength *big.Int, random *big.Int, skipped
 	randomVoter.Mod(randomVoter, electionLength)
 	key := new(big.Int).SetBytes(crypto.Keccak256(crypto.Keccak256(append(index, slotTwo...))))
 	key.Add(key, randomVoter)
-	return state.GetState(addressTwo, common.BytesToHash(key.Bytes()))
+	return state.GetState(addressThree, common.BytesToHash(key.Bytes()))
 }
 func (p *Panarchy) getValidator(block *types.Block, skipped *big.Int, state *state.StateDB) common.Address {
 	index := p.schedule(block.Time())
@@ -94,4 +95,9 @@ func hashonionFromStorageOrNew(validator common.Address, blockNumber *big.Int, s
 		}
 		return hash
 	}
+}
+
+func coinbase(validator common.Address, blockNumber *big.Int, state *state.StateDB, isUncle bool) common.Address {
+
+
 }
