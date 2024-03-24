@@ -220,8 +220,8 @@ func (sm *BlockProcessor) processWithParent(block, parent *types.Block) (logs st
 	if err = sm.VerifyPanarchy(block, parent, state, false); err != nil {
 		return nil, nil, err
 	}
-	coinbase := coinbase(validator, block.Time(), state)
-
+	block.cacheCoinbase(coinbase(block, state))
+	
 	receipts, err = sm.TransitionState(state, parent, block, false)
 	if err != nil {
 		return
