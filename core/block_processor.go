@@ -297,7 +297,7 @@ func (sm *BlockProcessor) VerifyPanarchy(block, parent *types.Block, state *stat
 	if validator != sm.panarchy.getValidator(block, skipped, state) {
 		return ValidationError("Not the assigned validator")
 	}
-	currentHash := hashOnionFromStorageOrNew(validator, block.Number(), state, isUncle)
+	currentHash := hashOnionFromStorageOrNew(validator, block.Time(), state, isUncle)
 	preimage := new(big.Int).Xor(block.Random(), parent.Random())
 	hash := crypto.Keccak256Hash(preimage.Bytes())
 	if hash != currentHash {
