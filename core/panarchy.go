@@ -97,7 +97,19 @@ func hashonionFromStorageOrNew(validator common.Address, blockNumber *big.Int, s
 	}
 }
 
-func coinbase(validator common.Address, blockNumber *big.Int, state *state.StateDB, isUncle bool) common.Address {
-
-
+func coinbase(validator common.Address, blockNumber *big.Int, state *state.StateDB) common.Address {
+	validatorPadded := common.LeftPadBytes(validator.Bytes(), 32)
+	coinbase := crypto.Keccak256(append(validatorPadded, slotOne...))
+	validSinceField := new(big.Int).Add(new(big.Int).SetBytes(coinbase), common.Big1)
+	key := common.BytesToHash(validSinceField.Bytes())
+	data := state.GetState(addressTwo, key)
+	validSince := new(big.Int).SetBytes(data.Bytes())
+	if validSince.Cmp(common.Big0) == 0 {
+		return validator
+	} else if blockNumber.Cmp(validSince) < 0{
+		
+	} else {
+		coinbase := state.GetState(addressTwo, common.BytesToHash(coinbase))
+	}
+	
 }
