@@ -2,8 +2,7 @@ contract BitPeople {
 
     Schedule schedule = Schedule(0x0000000000000000000000000000000000000000);
 
-    uint entropy;
-    function getRandomNumber() internal returns (uint) { return entropy = uint(keccak256(abi.encode(blockhash(block.number - 1), entropy))); }
+    function getRandomNumber() internal returns (uint) { return block.random; }
 
     struct Nym { uint id; bool verified; }
     struct Pair { bool[2] verified; bool disputed; }
