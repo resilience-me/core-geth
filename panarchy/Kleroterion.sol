@@ -11,7 +11,7 @@ contract Kleroterion {
     Schedule schedule = Schedule(0x0000000000000000000000000000000000000000);
     BitPeople bitpeople = BitPeople(0x0000000000000000000000000000000000000005);
 
-    mapping (uint => bytes32) seed;
+    mapping (uint => uint) public seed;
 
     mapping (uint => mapping (address => bytes32)) commit;
     mapping (uint => uint) votes;
@@ -22,7 +22,7 @@ contract Kleroterion {
     mapping (uint => mapping (address => uint)) public balanceOf;
     mapping (uint => mapping (address => mapping (address => uint))) public allowed;
 
-    function initSeed(uint _t) public { seed[_t] = bitpeople.registry(_t-1, winner[_t]%bitpeople.registered(_t-1)); }
+    function initSeed() public { uint t = schedule.schedule()-1; seed[t] = uint(bitpeople.registry(t-1, winner[t]%bitpeople.registered(t-1))); }
 
     function commitHash(bytes32 _hash) public {
         uint t = schedule.schedule();
