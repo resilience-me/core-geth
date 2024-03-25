@@ -34,7 +34,7 @@ contract Kleroterion {
     function revealHash(bytes32 _preimage) public {
         uint t = schedule.schedule();
         require(schedule.quarter(t) == 2 && keccak256(abi.encode(_preimage)) == commit[t-1][msg.sender]);
-        if(seed[t-1] == 0) initSeed(_t-1);
+        if(seed[t-1] == bytes32(0)) initSeed(_t-1);
         bytes32 mutated = keccak256(abi.encode(_preimage, seed[t-1]));
         uint id = uint(mutated)%votes[t];
         points[t][id]++;
