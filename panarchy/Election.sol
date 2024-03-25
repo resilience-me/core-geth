@@ -1,6 +1,5 @@
-contract Election is Token {
+contract Election is Mixer {
 
-    Schedule schedule = Schedule(0x0000000000000000000000000000000000000000);
     BitPeople bitPeople = BitPeople(0x0000000000000000000000000000000000000005);
 
     mapping (uint => address[]) election;
