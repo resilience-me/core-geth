@@ -30,14 +30,13 @@ contract Kleroterion {
     function revealHash(bytes32 _preimage) public {
         uint t = schedule.schedule();
         require(schedule.halftime(t) && keccak256(abi.encode(_preimage)) == commit[t-1][msg.sender]);
-        uint id = winner[t-1];
-        address seed = bitpeople.registry[t-1][id%bitpeople.registry[t-1].length];
+        address seed = bitpeople.registry(t-1, winner[t-1]%bitpeople.registered(t-1));
         bytes32 mutated = keccak256(abi.encode(_preimage, seed));
         uint id = uint(mutated)%votes[t];
-        points[_t][_id]++;
-        if (points[_t][_id] > highscore[_t]) {
-            highscore[_t]++;
-            winner[_t] = _id;
+        points[t][id]++;
+        if (points[t][id] > highscore[t]) {
+            highscore[t]++;
+            winner[t] = id;
         }
         delete commit[t-1][msg.sender];
     }
