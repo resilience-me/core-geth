@@ -6,7 +6,7 @@
 // and, it can be used by any other application on the ledger as well. It will likely be used by the validators to periodically "reset" their random number generator, making it
 // even more secure.
 
-contract Kleroterion {
+contract Kleroterion is Token {
 
     Schedule schedule = Schedule(0x0000000000000000000000000000000000000000);
     BitPeople bitpeople = BitPeople(0x0000000000000000000000000000000000000005);
@@ -18,9 +18,7 @@ contract Kleroterion {
     mapping (uint => mapping (uint => uint)) points;
     mapping (uint => uint) highscore;
     mapping (uint => uint) public winner;
-    mapping (uint => mapping (address => bool)) claimed;
-    mapping (uint => mapping (address => uint)) public balanceOf;
-    mapping (uint => mapping (address => mapping (address => uint))) public allowed;
+    mapping (uint => mapping (address => bool)) claimedRandomToken;
 
     function initSeed(uint _t) internal { seed[_t] = uint160(bitpeople.registry(_t-1, winner[_t]%bitpeople.registered(_t-1))); }
 
@@ -51,8 +49,8 @@ contract Kleroterion {
     }
     function allocateRandomToken() public {
         uint t = schedule.schedule();
-        require(bitpeople.proofOfUniqueHuman(t, msg.sender) && !claimed[t][msg.sender]);
+        require(bitpeople.proofOfUniqueHuman(t, msg.sender) && !claimedRandomToken[t][msg.sender]);
         balanceOf[t][msg.sender]++;
-        claimed[t][msg.sender] = true;
+        claimedRandomToken[t][msg.sender] = true;
     }
 }
