@@ -6,9 +6,8 @@
 // and, it can be used by any other application on the ledger as well. It will likely be used by the validators to periodically "reset" their random number generator, making it
 // even more secure.
 
-contract Kleroterion is Token {
+contract Kleroterion is Mixer {
 
-    Schedule schedule = Schedule(0x0000000000000000000000000000000000000000);
     BitPeople bitpeople = BitPeople(0x0000000000000000000000000000000000000005);
 
     mapping (uint => uint) seed;
