@@ -1,4 +1,7 @@
-contract Token {
+contract Mixer {
+
+    Schedule schedule = Schedule(0x0000000000000000000000000000000000000000);
+    
     mapping (uint => mapping (address => uint)) public balanceOf;
     mapping (uint => mapping (address => mapping (address => uint))) public allowed;
 
