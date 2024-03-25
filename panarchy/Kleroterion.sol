@@ -11,7 +11,7 @@ contract Kleroterion {
     Schedule schedule = Schedule(0x0000000000000000000000000000000000000000);
     BitPeople bitpeople = BitPeople(0x0000000000000000000000000000000000000005);
 
-    mapping (uint => uint) public seed;
+    mapping (uint => uint) seed;
 
     mapping (uint => mapping (address => bytes32)) commit;
     mapping (uint => uint) votes;
@@ -22,7 +22,13 @@ contract Kleroterion {
     mapping (uint => mapping (address => uint)) public balanceOf;
     mapping (uint => mapping (address => mapping (address => uint))) public allowed;
 
-    function initSeed() public { uint t = schedule.schedule()-1; seed[t] = uint(bitpeople.registry(t-1, winner[t]%bitpeople.registered(t-1))); }
+    function initSeed(uint _t) internal { seed[_t] = uint(bitpeople.registry(_t-1, winner[_t]%bitpeople.registered(_t-1))); }
+
+    function getSeed() public {
+        uint t = schedule.schedule()-1;
+        if(seed[t] == bytes32(0)) initSeed(t);
+        return seed[t];
+    }
 
     function commitHash(bytes32 _hash) public {
         uint t = schedule.schedule();
@@ -34,8 +40,7 @@ contract Kleroterion {
     function revealHash(bytes32 _preimage) public {
         uint t = schedule.schedule();
         require(schedule.quarter(t) == 2 && keccak256(abi.encode(_preimage)) == commit[t-1][msg.sender]);
-        if(seed[t-1] == bytes32(0)) initSeed(_t-1);
-        bytes32 mutated = keccak256(abi.encode(_preimage, seed[t-1]));
+        bytes32 mutated = keccak256(abi.encode(_preimage, getSeed()));
         uint id = uint(mutated)%votes[t];
         points[t][id]++;
         if (points[t][id] > highscore[t]) {
