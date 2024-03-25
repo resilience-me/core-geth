@@ -9,7 +9,7 @@
 contract Kleroterion {
 
     Schedule schedule = Schedule(0x0000000000000000000000000000000000000000);
-    BitPeople bitpeople = BitPeople(0x0000000000000000000000000000000000000004);
+    BitPeople bitpeople = BitPeople(0x0000000000000000000000000000000000000005);
 
     mapping (uint => mapping (address => bytes32)) commit;
     mapping (uint => uint) votes;
