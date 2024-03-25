@@ -5,7 +5,7 @@ contract Schedule {
 
     function schedule() public view returns(uint) { return ((block.timestamp - genesis) / period); }
     function toSeconds(uint _t) public pure returns (uint) { return genesis + _t * period; }
-    function halftime(uint _t) public view returns (bool) { return((block.timestamp >= toSeconds(_t)+period/2)); }
+    function quarter(uint _t) public view returns (uint) { return (block.timestamp-toSeconds(_t))/(period/4); }
     function hour(uint _t) public pure returns (uint) { return 1 + uint(keccak256(abi.encode(_t)))%24; }
     function pseudonymEvent(uint _t) public pure returns (uint) { return toSeconds(_t) + hour(_t)*1 hours; }
 }
