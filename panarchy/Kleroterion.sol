@@ -22,14 +22,14 @@ contract Kleroterion {
 
     function commitHash(bytes32 _hash) public {
         uint t = schedule.schedule();
-        require(!schedule.halftime(t) && balanceOf[t][msg.sender] >= 1);
+        require(schedule.quarter(t) < 2 && balanceOf[t][msg.sender] >= 1);
         balanceOf[t][msg.sender]--;
         commit[t][msg.sender] = _hash;
         votes[t]++;
     }
     function revealHash(bytes32 _preimage) public {
         uint t = schedule.schedule();
-        require(schedule.halftime(t) && keccak256(abi.encode(_preimage)) == commit[t-1][msg.sender]);
+        require(schedule.quarter(t) == 2 && keccak256(abi.encode(_preimage)) == commit[t-1][msg.sender]);
         address seed = bitpeople.registry(t-1, winner[t-1]%bitpeople.registered(t-1));
         bytes32 mutated = keccak256(abi.encode(_preimage, seed));
         uint id = uint(mutated)%votes[t];
