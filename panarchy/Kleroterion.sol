@@ -22,11 +22,11 @@ contract Kleroterion {
     mapping (uint => mapping (address => uint)) public balanceOf;
     mapping (uint => mapping (address => mapping (address => uint))) public allowed;
 
-    function initSeed(uint _t) internal { seed[_t] = uint(bitpeople.registry(_t-1, winner[_t]%bitpeople.registered(_t-1))); }
+    function initSeed(uint _t) internal { seed[_t] = uint160(bitpeople.registry(_t-1, winner[_t]%bitpeople.registered(_t-1))); }
 
-    function getSeed() public {
+    function getSeed() public returns (uint) {
         uint t = schedule.schedule()-1;
-        if(seed[t] == bytes32(0)) initSeed(t);
+        if(seed[t] == 0) initSeed(t);
         return seed[t];
     }
 
