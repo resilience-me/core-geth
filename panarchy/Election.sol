@@ -28,7 +28,7 @@ contract Election is Token {
 
     mapping (uint => address[]) election;
 
-    mapping (uint => mapping (address => bool)) suffrageToken;
+    mapping (uint => mapping (address => bool)) claimedSuffrageToken;
 
     function vote(address _validator) public {
         uint t = schedule.schedule();
@@ -40,8 +40,8 @@ contract Election is Token {
     function allocateSuffrageToken() public {
         uint t = schedule.schedule();
         require(bitPeople.proofOfUniqueHuman(t, msg.sender));
-        require(!suffrageToken[t][msg.sender]);
+        require(!claimedSuffrageToken[t][msg.sender]);
         balanceOf[t][msg.sender]++;
-        suffrageToken[t][msg.sender] = true;
+        claimedSuffrageToken[t][msg.sender] = true;
     }
 }
