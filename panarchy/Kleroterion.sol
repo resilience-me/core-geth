@@ -27,10 +27,7 @@ contract Kleroterion is Mixer {
         bytes32 mutated = keccak256(abi.encode(_preimage, winner[_t-1]));
         uint id = uint(mutated)%votes[t];
         points[t][id]++;
-        if (points[t][id] > highscore[t]) {
-            highscore[t]++;
-            winner[t] = id;
-        }
+        if (points[t][id] > points[t][winner[t]]) winner[t] = id;
         delete commit[t-1][msg.sender];
     }
     function allocateRandomToken() public {
