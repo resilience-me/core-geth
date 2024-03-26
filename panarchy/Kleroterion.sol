@@ -10,22 +10,12 @@ contract Kleroterion is Mixer {
 
     BitPeople bitpeople = BitPeople(0x0000000000000000000000000000000000000005);
 
-    mapping (uint => uint) seed;
-
     mapping (uint => mapping (address => bytes32)) commit;
     mapping (uint => uint) votes;
     mapping (uint => mapping (uint => uint)) points;
     mapping (uint => uint) highscore;
     mapping (uint => uint) public winner;
     mapping (uint => mapping (address => bool)) claimedRandomToken;
-
-    function initSeed(uint _t) internal { seed[_t] = uint160(bitpeople.registry(_t-1, winner[_t]%bitpeople.registered(_t-1))); }
-
-    function getSeed() public returns (uint) {
-        uint t = schedule.schedule()-1;
-        if(seed[t] == 0) initSeed(t);
-        return seed[t];
-    }
 
     function commitHash(bytes32 _hash) public {
         uint t = schedule.schedule();
@@ -37,7 +27,7 @@ contract Kleroterion is Mixer {
     function revealHash(bytes32 _preimage) public {
         uint t = schedule.schedule();
         require(schedule.quarter(t) == 2 && keccak256(abi.encode(_preimage)) == commit[t-1][msg.sender]);
-        bytes32 mutated = keccak256(abi.encode(_preimage, getSeed()));
+        bytes32 mutated = keccak256(abi.encode(_preimage, winner[_t-1]));
         uint id = uint(mutated)%votes[t];
         points[t][id]++;
         if (points[t][id] > highscore[t]) {
