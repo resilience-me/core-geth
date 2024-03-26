@@ -10,7 +10,6 @@ contract Kleroterion is Mixer {
     mapping (uint => mapping (address => bytes32)) commit;
     mapping (uint => uint) votes;
     mapping (uint => mapping (uint => uint)) points;
-    mapping (uint => uint) highscore;
     mapping (uint => uint) public winner;
     mapping (uint => mapping (address => bool)) claimedRandomToken;
 
