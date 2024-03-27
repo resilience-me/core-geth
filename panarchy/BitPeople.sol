@@ -167,7 +167,7 @@ contract BitPeople is Mixer {
             uint id = court[t][msg.sender].id;
             require(pair[t][getCourt(t, id)].disputed == true);
             delete court[t][msg.sender].verified;
-            court[t][msg.sender].id = uint(keccak256(abi.encode(id)));
+            court[t][msg.sender].id = uint(keccak256(abi.encode(0, id)));
     }
     function borderVote(uint _target) external {
             uint t = schedule();
