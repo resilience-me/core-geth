@@ -7,14 +7,14 @@ contract Election is Mixer {
     mapping (uint => mapping (address => bool)) claimedSuffrageToken;
 
     function vote(address _validator) public {
-        uint t = schedule.schedule();
+        uint t = schedule();
         require(balanceOf[t][msg.sender] >= 1);
         balanceOf[t][msg.sender]--;
         election[t+2].push(_validator);
     }
 
     function allocateSuffrageToken() public {
-        uint t = schedule.schedule();
+        uint t = schedule();
         require(bitPeople.proofOfUniqueHuman(t, msg.sender));
         require(!claimedSuffrageToken[t][msg.sender]);
         balanceOf[t][msg.sender]++;
