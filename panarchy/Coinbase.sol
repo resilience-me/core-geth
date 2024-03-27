@@ -1,5 +1,4 @@
-contract Coinbase {
-    Schedule schedule = Schedule(0x0000000000000000000000000000000000000000);
+contract Coinbase is Schedule {
 
     struct CoinbaseRecord {
         address coinbase;
@@ -10,7 +9,7 @@ contract Coinbase {
     mapping (address => address) public previous;
 
     function setCoinbase(address _coinbase) public {
-        uint t = schedule.schedule();
+        uint t = schedule();
         if (t >= coinbase[msg.sender].validSince) {
             previous[msg.sender] = coinbase[msg.sender].coinbase;
         }
