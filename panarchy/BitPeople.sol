@@ -138,8 +138,7 @@ contract BitPeople is Mixer {
     function courtVerified() external {
             uint t = schedule()-1;
             require(pairVerified(t, getCourt(t, court[t][msg.sender].id)));
-            require(court[t][msg.sender].verified[0] == true && court[t][msg.sender].verified[1]
-            == true); allocateTokens(t+1);
+            require(court[t][msg.sender].verified[0] == true && court[t][msg.sender].verified[1] == true); allocateTokens(t+1);
             delete court[t][msg.sender];
     }
     function claimProofOfUniqueHuman() external {
