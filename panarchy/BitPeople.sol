@@ -182,9 +182,8 @@ contract BitPeople is Mixer {
             else if(_target < permits[t]) {
                 if(traverser[t] > 0) traverser[t]--;
                 else {
-                    require(permits[t] > 0);
                     permits[t]--;
-                    traverser[t] = target[t][permits[t]-1];
+                    traverser[t] = target[t][permits[t]];
                 }
             }
             else traverser[t]++;
