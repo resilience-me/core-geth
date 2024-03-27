@@ -14,15 +14,15 @@ contract Kleroterion is Mixer {
     mapping (uint => mapping (address => bool)) claimedRandomToken;
 
     function commitHash(bytes32 _hash) public {
-        uint t = schedule.schedule();
-        require(schedule.quarter(t) < 2 && balanceOf[t][msg.sender] >= 1);
+        uint t = schedule();
+        require(quarter(t) < 2 && balanceOf[t][msg.sender] >= 1);
         balanceOf[t][msg.sender]--;
         commit[t][msg.sender] = _hash;
         votes[t]++;
     }
     function revealHash(bytes32 _preimage) public {
-        uint t = schedule.schedule();
-        require(schedule.quarter(t) == 2 && keccak256(abi.encode(_preimage)) == commit[t-1][msg.sender]);
+        uint t = schedule();
+        require(quarter(t) == 2 && keccak256(abi.encode(_preimage)) == commit[t-1][msg.sender]);
         bytes32 mutated = keccak256(abi.encode(_preimage, winner[_t-1]));
         uint id = uint(mutated)%votes[t];
         points[t][id]++;
@@ -30,7 +30,7 @@ contract Kleroterion is Mixer {
         delete commit[t-1][msg.sender];
     }
     function allocateRandomToken() public {
-        uint t = schedule.schedule();
+        uint t = schedule();
         require(bitpeople.proofOfUniqueHuman(t, msg.sender) && !claimedRandomToken[t][msg.sender]);
         balanceOf[t][msg.sender]++;
         claimedRandomToken[t][msg.sender] = true;
