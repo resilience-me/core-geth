@@ -1,6 +1,4 @@
-contract Random {
-
-    Schedule schedule = Schedule(0x0000000000000000000000000000000000000000);
+contract Random is Schedule {
 
     struct Pending {
         bytes32 hashOnion;
@@ -14,7 +12,7 @@ contract Random {
     function newHashOnion(bytes32 _hashOnion) public {
         pending[msg.sender] = Pending({
             hashOnion: _hashOnion,
-            validSince: schedule.schedule()+2
+            validSince: schedule()+2
         });
     }
 }
